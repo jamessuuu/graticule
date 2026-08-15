@@ -22,3 +22,5 @@ test-results/
 # Build artifact: compiled by scripts/build-worker.mjs (esbuild), part of
 # `pnpm run build` — never hand-edited, always regenerated.
 /apps/web/public/worker/
+
+.vercel
