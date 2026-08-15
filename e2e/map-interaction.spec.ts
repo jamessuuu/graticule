@@ -5,7 +5,9 @@ import { test, expect } from "@playwright/test";
 // marker count and per-note token counts change accordingly.
 
 async function waitForModelReady(page: import("@playwright/test").Page) {
-  await expect(page.getByText(/model: .*ready/)).toBeVisible({ timeout: 45_000 });
+  // role=status scoped — see real-inference.spec.ts's comment on this
+  // exact locator for why a bare getByText(/model: .*ready/) is fragile.
+  await expect(page.getByRole("status").filter({ hasText: "ready (" })).toBeVisible({ timeout: 45_000 });
 }
 
 test.describe("@smoke note workbench + map", () => {

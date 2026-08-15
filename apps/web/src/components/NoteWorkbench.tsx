@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { MAX_NOTES, MAX_TOTAL_CHARACTERS } from "@graticule/core";
 import { ModelLifecycle } from "./ModelLifecycle";
+import { ModelUpgrade } from "./ModelUpgrade";
 import { Map } from "./Map";
 import { ToastStack } from "./ToastStack";
 import { SearchBox } from "./SearchBox";
@@ -96,7 +97,19 @@ function NoteRow({
 }
 
 export function NoteWorkbench() {
-  const { embedderState, load, notes, addNote, editNote, removeNote, clearSamples, pendingIds, embedTexts } = useNotesSession();
+  const {
+    embedderState,
+    load,
+    switchModel,
+    reembedding,
+    notes,
+    addNote,
+    editNote,
+    removeNote,
+    clearSamples,
+    pendingIds,
+    embedTexts,
+  } = useNotesSession();
   const { toasts, pushToast, dismissToast } = useToasts();
   const { importFromDrop, importFromFileList, pickFolder, supportsFileSystemAccess } = useFileImport();
   const reducedMotion = useReducedMotion();
@@ -187,6 +200,7 @@ export function NoteWorkbench() {
   return (
     <div>
       <ModelLifecycle embedderState={embedderState} load={load} />
+      <ModelUpgrade embedderState={embedderState} switchModel={switchModel} reembedding={reembedding} noteCount={notes.length} />
 
       <Map notes={notes} reducedMotion={reducedMotion} selectedNoteId={selectedNoteId} onSelectNote={setSelectedNoteId} />
 

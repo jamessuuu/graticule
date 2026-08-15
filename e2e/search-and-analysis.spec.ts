@@ -25,7 +25,9 @@ test("@smoke search, pairwise percentile, and outlier floors behave correctly", 
   });
 
   await page.goto("/");
-  await expect(page.getByText(/model: .*ready/)).toBeVisible({ timeout: 45_000 });
+  // role=status scoped — see real-inference.spec.ts's comment on this
+  // exact locator for why a bare getByText(/model: .*ready/) is fragile.
+  await expect(page.getByRole("status").filter({ hasText: "ready (" })).toBeVisible({ timeout: 45_000 });
 
   // Below every floor: all three sections show their "add N more" state,
   // never a silently empty section (SPEC.md §13).

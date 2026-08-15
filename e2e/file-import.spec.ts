@@ -11,7 +11,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 test("@smoke importing a dropped/chosen .txt file creates a real embedded note", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText(/model: .*ready/)).toBeVisible({ timeout: 45_000 });
+  // role=status scoped — see real-inference.spec.ts's comment on this
+  // exact locator for why a bare getByText(/model: .*ready/) is fragile.
+  await expect(page.getByRole("status").filter({ hasText: "ready (" })).toBeVisible({ timeout: 45_000 });
 
   const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: "Choose files" }).click();

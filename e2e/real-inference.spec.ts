@@ -26,7 +26,15 @@ test("@smoke loads the default model for real and embeds a note", async ({ page 
   // Model auto-loads idly; wait for the real load to finish. Cold load
   // measured ~4.7-5.4s on this desktop (SPEC.md facts line + M1's own
   // measurement) — give it real headroom in CI-shaped environments.
-  await expect(page.getByText(/model: .*ready/)).toBeVisible({ timeout: 45_000 });
+  //
+  // Scoped to role=status rather than a bare page.getByText(/model:
+  // .*ready/): the plain text locator can resolve against a large
+  // ancestor whose *aggregate* nested text also happens to satisfy the
+  // pattern before the model is actually ready (confirmed empirically
+  // while building M5 — it matched a container still reading "model:
+  // loading…"), which races this wait and the network-evidence assertion
+  // below against the wrong DOM state.
+  await expect(page.getByRole("status").filter({ hasText: "ready (" })).toBeVisible({ timeout: 45_000 });
 
   // Real network evidence: the model + tokenizer were actually fetched
   // from the real CDN, not mocked.

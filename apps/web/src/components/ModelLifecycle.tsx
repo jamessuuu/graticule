@@ -33,6 +33,15 @@ export function ModelLifecycle({ embedderState, load }: Props) {
     }
   }, [embedderState.status, load]);
 
+  // Once a multilingual switch is in play (loading/ready/error for that
+  // variant), ModelUpgrade fully owns that messaging — showing this
+  // component's generic line too would double up two "loading — X%"
+  // lines, or a bare "Try again" alongside ModelUpgrade's more correct
+  // "Continue with the smaller default model" recovery action.
+  if (embedderState.variant === "multilingual") {
+    return null;
+  }
+
   if (embedderState.status === "idle") {
     return (
       <p className="receipt-row" role="status">
