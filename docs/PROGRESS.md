@@ -11,8 +11,8 @@ should look first.
 | M1 | Chunking core + default embedder in a Worker + first real inference | done |
 | M2 | PCA + dual markers + live typing + paste/drop + NFC dedupe + truncation + caps | done |
 | M3 | Search + percentile + deterministic clustering + outlier, floors enforced | done |
-| M4 | `/limits` negation demo + `/coverage` wired to real fixture results | not started |
-| M5 | Multilingual opt-in (gesture-gated) | not started |
+| M4 | `/limits` negation demo + `/coverage` wired to real fixture results | done |
+| M5 | Multilingual opt-in (gesture-gated) | in progress (Worker/session backend done in M1/M4; UI pending) |
 | M6 | Sample corpus + hero + `/methodology` + Network Receipt + `/docs` | not started |
 | M7 | Brand, accessibility pass, isomorphism + network e2e, README, review fixes | not started |
 
@@ -57,10 +57,24 @@ SPEC.md's literal text, and why.
 - **A real hydration-mismatch bug was caught and fixed in M2**: reading
   `window`-dependent feature detection (`showDirectoryPicker` support)
   directly in a hook body during render differs between SSR and the
-  client's first paint. Fixed via the standard `useState(false)` +
-  `useEffect` "client-only" pattern in `useFileImport.ts`. Worth
-  remembering as a pattern, not just a one-off fix, before adding any
-  more `typeof window` / browser-API feature checks.
+  client's first paint. Originally fixed with `useState(false)` +
+  `useEffect`; **M4 upgraded this and `useReducedMotion` to
+  `useSyncExternalStore`** (the React-idiomatic API for exactly this —
+  external, browser-only state read consistently across SSR/client),
+  after wiring up `eslint-plugin-react-hooks` surfaced the pattern. Worth
+  remembering before adding any more `typeof window` / browser-API
+  feature checks: reach for `useSyncExternalStore` first, not
+  useState+useEffect.
+- **`eslint-plugin-react-hooks` (v7.1.1) is now wired in** (scoped to
+  `apps/web/src/**`, `eslint.config.mjs`), added in M4 after the first
+  self-inflicted CI failure from writing a disable comment for a rule
+  that wasn't even registered. Its flat config ships far more than the
+  classic rules-of-hooks/exhaustive-deps pair — including
+  `set-state-in-effect`, which is right for external-store-subscription
+  patterns but over-fires on the ordinary "kick off async work, track
+  loading state in an effect" pattern; `NegationDemo.tsx` has one
+  narrowly-scoped, commented `eslint-disable-next-line` for exactly that
+  case rather than contorting the code to satisfy it.
 - **`DEFAULT_CUT_THRESHOLD` (packages/core/src/cluster.ts) is empirically
   tuned, not a guess** — 0.85 (cosine distance), found by sweeping
   0.3-0.95 against a real 25-note/3-topic fixture and picking the plateau
@@ -91,3 +105,30 @@ SPEC.md's literal text, and why.
   for the textarea to actually read back empty before typing the next
   note) — both fixes are independently correct, not one working around
   the other.
+- **`/coverage` is a Server Component that reads fixture JSON off disk at
+  build time**, not a client component with a static import — deliberate,
+  so `fixtures/linguistic/code-switch-taglish.json` (which didn't exist
+  until partway through M4) could be handled gracefully via
+  `existsSync()` rather than needing a conditional ESM import for a file
+  that might not exist. `apps/web/src/lib/coverage.ts` is the pure,
+  independently-tested generation logic (`generateCoverageEntries`,
+  `formatCoveragePermittedStatement`); the page component is a thin
+  wrapper that loads the two fixture files and calls it.
+- **The Taglish fixture content pipeline was two agents, not one**:
+  `computational-linguist` drafted+grammar-checked the 20 items (flagged
+  its own non-native-speaker limits), then `localization-specialist`
+  reviewed for register authenticity, fixed 3 items, wrote 20 distractor
+  sentences, and — critically — recommended the coverage table hedge its
+  claim to the specific register tested rather than a bare "verified"
+  badge. `coverage.ts`'s `TaglishVerdict.note` carries that hedge
+  verbatim onto the page; don't strip it out for brevity if this ever
+  gets redesigned. Real measurement against the actual multilingual model
+  (not assumed): 20/20 items passed, average discriminability gap 0.428,
+  closest margin 0.0008 (item 14 — noted in the fixture as a near-miss
+  worth knowing about even though it technically passed).
+- **`switchModel`/`reembedding` already exist in `useNotesSession.ts`**
+  (built ahead, during M4, since the Worker/session backend for
+  model-switching needed no new plumbing beyond what M1 already built).
+  M5 still needs: the actual UI (gesture-gated load button, byte-progress
+  bar, size/time-estimate copy before the click), and the forced-failure
+  test for the allocation-failure-offers-default-fallback path.

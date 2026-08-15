@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Note, NoteSource } from "@graticule/core";
 import { checkCaps, isDuplicateText } from "@graticule/core";
 import { useEmbedderWorker } from "./useEmbedderWorker";
+import type { ModelVariant } from "./useEmbedderWorker";
 
 function makeNoteId(): string {
   return `note-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -34,6 +35,8 @@ export function useNotesSession() {
   const [notes, setNotes] = useState<Note[]>([]);
   const notesRef = useRef<Note[]>([]);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const [reembedding, setReembedding] = useState(false);
+  const pendingSwitch = useRef(false);
 
   const setNotesBoth = useCallback((updater: (prev: Note[]) => Note[]) => {
     setNotes((prev) => {
@@ -119,5 +122,59 @@ export function useNotesSession() {
     setNotesBoth((ns) => ns.filter((n) => n.source !== "sample"));
   }, [setNotesBoth]);
 
-  return { embedderState, load, notes, addNote, editNote, removeNote, clearSamples, pendingIds, embedTexts };
+  /** SPEC.md §9: "Switching mid-session re-embeds every chunk... because
+   * the embedding space itself changed, not just the note set." Token
+   * budgets (§3 Decision 2) are also counted by the *active* model's own
+   * tokenizer, so a model switch re-chunks too, not just re-embeds. */
+  const switchModel = useCallback(
+    (variant: ModelVariant) => {
+      pendingSwitch.current = true;
+      load(variant);
+    },
+    [load]
+  );
+
+  useEffect(() => {
+    if (!pendingSwitch.current) return;
+    if (embedderState.status !== "ready") return;
+    pendingSwitch.current = false;
+
+    const current = notesRef.current;
+    if (current.length === 0) return;
+
+    let cancelled = false;
+    setReembedding(true);
+    (async () => {
+      const updated: Note[] = [];
+      for (const note of current) {
+        if (cancelled) return;
+        const { chunks, centroid } = await embedNote(note.id, note.text);
+        updated.push({ ...note, chunks, centroid });
+      }
+      if (!cancelled) {
+        setNotesBoth(() => updated);
+        setReembedding(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // embedNote/setNotesBoth are stable useCallbacks; embedderState.status
+    // is the real trigger for "the newly-chosen model just became ready."
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embedderState.status]);
+
+  return {
+    embedderState,
+    load,
+    switchModel,
+    reembedding,
+    notes,
+    addNote,
+    editNote,
+    removeNote,
+    clearSamples,
+    pendingIds,
+    embedTexts,
+  };
 }

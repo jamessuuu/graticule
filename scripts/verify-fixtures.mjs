@@ -32,7 +32,7 @@ import {
   segmentGraphemes,
   segmentSentences,
 } from "../packages/core/src/index.ts";
-import { createDefaultEmbedder } from "../packages/model/src/embedders.ts";
+import { createDefaultEmbedder, createMultilingualEmbedder } from "../packages/model/src/embedders.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
@@ -322,6 +322,109 @@ const verifiers = {
 
     return { meanDisplacementPx: Number(mean.toFixed(2)), maxDisplacementPx: Number(max.toFixed(2)) };
   },
+
+  "negation-pairs": async (fixture, ctx) => {
+    const { pairs, defaultPair, bannedWordsInDemoCopy } = fixture.input;
+    const { cosineEpsilon, minAcceptableCosine } = fixture.expected;
+
+    const allTexts = pairs.flatMap((p) => [p.a, p.b]);
+    const embeddings = await ctx.embedder.embed(allTexts);
+    for (let i = 0; i < pairs.length; i++) {
+      const measured = cosineSimilarity(embeddings[i * 2], embeddings[i * 2 + 1]);
+      assert(
+        Math.abs(measured - pairs[i].cosine) <= cosineEpsilon,
+        `pair ${i} ("${pairs[i].a}" / "${pairs[i].b}") drifted: pinned ${pairs[i].cosine}, measured ${measured.toFixed(4)}`
+      );
+      assert(measured >= minAcceptableCosine, `pair ${i} cosine ${measured.toFixed(4)} fell below the negation-blindness floor ${minAcceptableCosine}`);
+    }
+
+    const [ca, cb, pa, pb] = await ctx.embedder.embed([
+      defaultPair.contradiction.a,
+      defaultPair.contradiction.b,
+      defaultPair.paraphrase.a,
+      defaultPair.paraphrase.b,
+    ]);
+    const contraCosine = cosineSimilarity(ca, cb);
+    const paraCosine = cosineSimilarity(pa, pb);
+    assert(
+      Math.abs(contraCosine - defaultPair.contradiction.cosine) <= cosineEpsilon,
+      `default contradiction pair drifted: pinned ${defaultPair.contradiction.cosine}, measured ${contraCosine.toFixed(4)}`
+    );
+    assert(
+      Math.abs(paraCosine - defaultPair.paraphrase.cosine) <= cosineEpsilon,
+      `default paraphrase pair drifted: pinned ${defaultPair.paraphrase.cosine}, measured ${paraCosine.toFixed(4)}`
+    );
+
+    // Grep the /limits page's static demo copy (not the pasted-in
+    // comparison texts, which legitimately contain words like
+    // "confirmed" as data) for words that would wrongly anthropomorphize
+    // the model as endorsing/understanding the comparison.
+    const limitsPageSource = readFileSync(
+      path.join(root, "apps/web/src/app/limits/page.tsx"),
+      "utf8"
+    );
+    const negationDemoSource = readFileSync(
+      path.join(root, "apps/web/src/components/NegationDemo.tsx"),
+      "utf8"
+    );
+    const combinedCopy = `${limitsPageSource}\n${negationDemoSource}`.toLowerCase();
+    for (const banned of bannedWordsInDemoCopy) {
+      assert(!combinedCopy.includes(banned.toLowerCase()), `banned agreement-implying word found in /limits demo copy: "${banned}"`);
+    }
+
+    return { contraCosine: Number(contraCosine.toFixed(4)), paraCosine: Number(paraCosine.toFixed(4)) };
+  },
+
+  // Measured against the MULTILINGUAL model, not the default — the
+  // coverage claim this fixture backs (SPEC.md §10's Filipino row) is
+  // specifically about the multilingual opt-in (M5); the English-only
+  // default never claimed Filipino support in the first place.
+  "code-switch-taglish": async (fixture, ctx) => {
+    const { items } = fixture.input;
+    const { cosineEpsilon, allItemsMustPass, minAverageGap } = fixture.expected;
+    const { passed: pinnedPassed, measuredPassCount, measuredAverageGap } = fixture.verdict;
+
+    const multilingual = await ctx.getMultilingualEmbedder();
+
+    const allTexts = items.flatMap((it) => [it.taglish, it.paraphrase, it.distractor]);
+    const embeddings = await multilingual.embed(allTexts);
+
+    let passCount = 0;
+    let gapSum = 0;
+    for (let i = 0; i < items.length; i++) {
+      const [t, p, d] = [embeddings[i * 3], embeddings[i * 3 + 1], embeddings[i * 3 + 2]];
+      const cosPara = cosineSimilarity(t, p);
+      const cosDist = cosineSimilarity(t, d);
+      const pass = cosPara > cosDist;
+      if (pass) passCount++;
+      gapSum += cosPara - cosDist;
+
+      assert(
+        Math.abs(cosPara - items[i].cosinePara) <= cosineEpsilon,
+        `item ${i} paraphrase cosine drifted: pinned ${items[i].cosinePara}, measured ${cosPara.toFixed(4)}`
+      );
+      assert(
+        Math.abs(cosDist - items[i].cosineDist) <= cosineEpsilon,
+        `item ${i} distractor cosine drifted: pinned ${items[i].cosineDist}, measured ${cosDist.toFixed(4)}`
+      );
+    }
+
+    const allPass = passCount === items.length;
+    assert(
+      !allItemsMustPass || allPass === pinnedPassed,
+      `expected all ${items.length} items to pass: ${pinnedPassed}, measured ${passCount}/${items.length} passing`
+    );
+    assert(passCount === measuredPassCount, `pinned pass count ${measuredPassCount} drifted from measured ${passCount}`);
+
+    const avgGap = gapSum / items.length;
+    assert(avgGap >= minAverageGap, `average discriminability gap ${avgGap.toFixed(4)} fell below floor ${minAverageGap}`);
+    assert(
+      Math.abs(avgGap - measuredAverageGap) <= cosineEpsilon,
+      `pinned average gap ${measuredAverageGap} drifted from measured ${avgGap.toFixed(4)}`
+    );
+
+    return { passCount, total: items.length, averageGap: Number(avgGap.toFixed(4)) };
+  },
 };
 
 // Full roster from SPEC.md §14, in build order — ids with no verifier yet
@@ -345,7 +448,21 @@ async function main() {
   await embedder.load(() => {});
   console.log(`verify-fixtures: model ready in ${Date.now() - t0}ms (${await embedder.cacheStatus()})`);
 
-  const ctx = { embedder, countTokens: (t) => embedder.countTokens(t) };
+  // Lazy: the 140MB multilingual model only downloads/loads if a fixture
+  // that actually needs it (code-switch-taglish) runs.
+  let multilingualEmbedder = null;
+  async function getMultilingualEmbedder() {
+    if (!multilingualEmbedder) {
+      console.log("verify-fixtures: loading the real multilingual embedder (140MB, real network fetch or local cache)...");
+      const mt0 = Date.now();
+      multilingualEmbedder = createMultilingualEmbedder();
+      await multilingualEmbedder.load(() => {});
+      console.log(`verify-fixtures: multilingual model ready in ${Date.now() - mt0}ms (${await multilingualEmbedder.cacheStatus()})`);
+    }
+    return multilingualEmbedder;
+  }
+
+  const ctx = { embedder, countTokens: (t) => embedder.countTokens(t), getMultilingualEmbedder };
 
   let passed = 0;
   let failed = 0;

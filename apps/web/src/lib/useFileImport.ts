@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 export interface ImportedFile {
   name: string;
@@ -118,16 +118,17 @@ export function useFileImport() {
     return out;
   }, []);
 
-  // Feature-detected only after mount — reading `window` directly during
-  // render (SSR-vs-client-first-paint) diverges (undefined vs. defined),
-  // which is a real hydration mismatch (React error #418), not just a
-  // theoretical one — caught live via Playwright console inspection.
-  const [supportsFileSystemAccess, setSupportsFileSystemAccess] = useState(false);
-  useEffect(() => {
-    setSupportsFileSystemAccess(
-      typeof (window as unknown as { showDirectoryPicker?: unknown }).showDirectoryPicker === "function"
-    );
-  }, []);
+  // Feature-detected via useSyncExternalStore, not a useState+useEffect
+  // pair — reading `window` directly during render (SSR-vs-client-first-
+  // paint) diverges (undefined vs. defined), which is a real hydration
+  // mismatch (React error #418), not just a theoretical one (caught live
+  // via Playwright console inspection). The feature flag never changes
+  // after mount, so `subscribe` is a no-op unsubscribe.
+  const supportsFileSystemAccess = useSyncExternalStore(
+    () => () => {},
+    () => typeof (window as unknown as { showDirectoryPicker?: unknown }).showDirectoryPicker === "function",
+    () => false
+  );
 
   return { importFromDrop, importFromFileList, pickFolder, supportsFileSystemAccess };
 }

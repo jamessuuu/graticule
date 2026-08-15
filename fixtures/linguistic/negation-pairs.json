@@ -1,0 +1,35 @@
+{
+  "id": "negation-pairs",
+  "kind": "measured",
+  "input": {
+    "pairs": [
+      { "a": "The vendor confirmed the deadline.", "b": "The vendor missed the deadline.", "cosine": 0.8645 },
+      { "a": "The store is open today.", "b": "The store is closed today.", "cosine": 0.8487 },
+      { "a": "She agreed to the proposal.", "b": "She rejected the proposal.", "cosine": 0.797 },
+      { "a": "The package arrived on time.", "b": "The package never arrived.", "cosine": 0.5768 },
+      { "a": "He passed the exam.", "b": "He failed the exam.", "cosine": 0.8255 },
+      { "a": "The results were positive.", "b": "The results were negative.", "cosine": 0.8199 },
+      { "a": "The flight departed as scheduled.", "b": "The flight was cancelled.", "cosine": 0.7452 },
+      { "a": "The team won the game.", "b": "The team lost the game.", "cosine": 0.8095 },
+      { "a": "The contract was signed.", "b": "The contract was terminated.", "cosine": 0.72 },
+      { "a": "The patient is recovering well.", "b": "The patient is not recovering.", "cosine": 0.8035 },
+      { "a": "The company reported a profit.", "b": "The company reported a loss.", "cosine": 0.7303 },
+      { "a": "The meeting was productive.", "b": "The meeting was a waste of time.", "cosine": 0.628 },
+      { "a": "The bridge is safe to cross.", "b": "The bridge is unsafe to cross.", "cosine": 0.9499 },
+      { "a": "The software update fixed the bug.", "b": "The software update introduced a new bug.", "cosine": 0.7522 },
+      { "a": "The invoice was paid in full.", "b": "The invoice remains unpaid.", "cosine": 0.7517 }
+    ],
+    "defaultPair": {
+      "contradiction": { "a": "The vendor confirmed the deadline.", "b": "The vendor missed the deadline.", "cosine": 0.8645 },
+      "paraphrase": { "a": "The vendor confirmed the deadline.", "b": "The vendor confirmed the due date.", "cosine": 0.7481 }
+    },
+    "bannedWordsInDemoCopy": ["agrees", "agreement", "confirms that", "matches", "verifies", "validates"],
+    "note": "15 original contradiction pairs (simple factual-polarity reversals), authored fresh, measured against the real shipped default model (Xenova/all-MiniLM-L6-v2). Mean cosine 0.7748, min 0.5768, max 0.9499 -- every pair still reads as substantially similar despite being factually opposite, which is the negation-blindness finding this fixture pins. defaultPair is SPEC.md S6's mandated /limits page default: the contradiction (0.8645) measures HIGHER than the paraphrase (0.7481) on this model -- an even more dramatic demonstration than the spec's own multilingual-model figures (0.517/0.537), which is exactly why S6 requires re-measuring per model rather than reusing numbers verbatim. Pinned cosines were measured with all 15 pairs in a single batched embed() call; batch composition/size measurably perturbs ONNX Runtime's floating-point results by a hundredth or two (confirmed empirically -- re-embedding the same pair alongside a different batch shifted one pair's cosine by 0.012), so cosineEpsilon is set to absorb that real, benign variance while still catching a genuine regression (a different model swaps typically move these numbers by 0.1+)."
+  },
+  "assertion": "Every pair's live-recomputed cosine similarity (real default model) matches its pinned snapshot within a small epsilon -- if the model version ever changes enough to move these numbers, this fails loudly rather than letting the /limits page's live-computed defaults silently disagree with what CI last verified. The default contradiction pair's cosine must be within epsilon of the pinned defaultPair.contradiction.cosine, and likewise for the paraphrase pair. The /limits page's static demo copy (not the pasted-in comparison texts themselves) must not contain any of bannedWordsInDemoCopy, case-insensitively.",
+  "expected": {
+    "cosineEpsilon": 0.02,
+    "allPairsHighSimilarityDespiteContradiction": true,
+    "minAcceptableCosine": 0.5
+  }
+}

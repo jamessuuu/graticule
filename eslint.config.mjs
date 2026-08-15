@@ -2,6 +2,7 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import globals from "globals";
+import reactHooks from "eslint-plugin-react-hooks";
 
 export default tseslint.config(
   {
@@ -34,6 +35,15 @@ export default tseslint.config(
       ],
       "no-console": ["warn", { allow: ["warn", "error"] }],
     },
+  },
+  {
+    // React hooks correctness — the classic rules-of-hooks/exhaustive-deps
+    // plus this version's newer React-Compiler-era checks (purity,
+    // immutability, set-state-in-render/effect, etc.). Scoped to the web
+    // app only; packages/core and scripts are plain TS/Node, no React.
+    files: ["apps/web/src/**/*.ts", "apps/web/src/**/*.tsx"],
+    plugins: { "react-hooks": reactHooks },
+    rules: reactHooks.configs.flat.recommended.rules,
   },
   {
     // Scripts and config files run under plain Node; console output is
