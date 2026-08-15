@@ -28,6 +28,24 @@ function post(message: WorkerResponse): void {
   (self as unknown as DedicatedWorkerGlobalScope).postMessage(message);
 }
 
+/** SPEC.md §8: the live Network Receipt badge. Model/tokenizer/runtime
+ * fetches happen inside THIS Worker, which has its own, independent
+ * resource-timing timeline (a dedicated Worker's `PerformanceObserver`
+ * never surfaces on the main document's `window.performance`) — so this
+ * is the only place that can actually see those requests. `buffered:
+ * true` also picks up anything that landed before this observer attached
+ * (this runs at module top level, before any `load` message can arrive,
+ * so that window is effectively empty in practice, but it costs nothing
+ * to be exact rather than assume the ordering). */
+let workerNetworkRequestCount = 0;
+if (typeof PerformanceObserver !== "undefined") {
+  const networkObserver = new PerformanceObserver((list) => {
+    workerNetworkRequestCount += list.getEntries().length;
+    post({ type: "networkCount", total: workerNetworkRequestCount });
+  });
+  networkObserver.observe({ type: "resource", buffered: true });
+}
+
 /** Best-effort OOM/allocation-shape detection (SPEC.md §9/§13). ONNX
  * Runtime / WASM allocation failures surface as varied, backend-specific
  * error shapes (RangeError from a failed `new WebAssembly.Memory`,

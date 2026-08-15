@@ -1,0 +1,22 @@
+{
+  "id": "sample-corpus",
+  "description": "SPEC.md §7: a 16-note English sample corpus authored for this project (not scraped, no licence question) — ~5 notes across each of 3 loosely related topics plus one deliberate singleton outlier. 16 clears every floor (percentile >=5, cluster >=15, outlier >=3), so a visitor with nothing to paste sees the map, the groups, and the outlier flag on first load. Authored fresh for graticule; not derived from any external source.",
+  "notes": [
+    { "id": "sample-move-1", "topic": "apartment-move", "text": "Booked the moving truck for Saturday morning — still need to confirm the exact pickup window." },
+    { "id": "sample-move-2", "topic": "apartment-move", "text": "Need to buy more boxes; the kitchen alone is going to take a dozen at least." },
+    { "id": "sample-move-3", "topic": "apartment-move", "text": "Called the new building's leasing office to ask about reserving the elevator for move-in day." },
+    { "id": "sample-move-4", "topic": "apartment-move", "text": "Forgot to update the mailing address with the bank before the move — have to do that this week." },
+    { "id": "sample-move-5", "topic": "apartment-move", "text": "The moving company wants a deposit before Saturday; need to send that transfer today." },
+    { "id": "sample-cook-1", "topic": "dinner-party", "text": "Thinking about braised short rib for the dinner party, but need to check if anyone's vegetarian first." },
+    { "id": "sample-cook-2", "topic": "dinner-party", "text": "Picked up fresh rosemary and thyme at the market for the roast chicken recipe." },
+    { "id": "sample-cook-3", "topic": "dinner-party", "text": "The sourdough starter needs feeding twice a day now that the kitchen's warmer." },
+    { "id": "sample-cook-4", "topic": "dinner-party", "text": "Should double-check the guest list against food allergies before finalizing the menu." },
+    { "id": "sample-cook-5", "topic": "dinner-party", "text": "Tried a new pasta dough recipe last night — it needed a lot more resting time than I gave it." },
+    { "id": "sample-run-1", "topic": "running", "text": "Ran 8km this morning; pace felt slower than usual, might just be the humidity." },
+    { "id": "sample-run-2", "topic": "running", "text": "Need new running shoes soon — the current pair is well past 500km." },
+    { "id": "sample-run-3", "topic": "running", "text": "Signed up for the half marathon in October; the training plan starts next Monday." },
+    { "id": "sample-run-4", "topic": "running", "text": "Left knee felt a little tight after yesterday's hill repeats — icing it tonight." },
+    { "id": "sample-run-5", "topic": "running", "text": "Switched to a lighter breakfast before morning runs; it seems to help with the side stitch." },
+    { "id": "sample-outlier-1", "topic": "outlier", "text": "Passport renewal appointment is at 9:15am on Thursday — bring the old passport and two photos." }
+  ]
+}

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { clearSampleCorpus } from "./helpers";
 
 // M1 gate: "a real embedding verified in a real browser Network tab" —
 // this drives the actual product UI (not a mocked pipeline) in headless
@@ -35,6 +36,12 @@ test("@smoke loads the default model for real and embeds a note", async ({ page 
   // loading…"), which races this wait and the network-evidence assertion
   // below against the wrong DOM state.
   await expect(page.getByRole("status").filter({ hasText: "ready (" })).toBeVisible({ timeout: 45_000 });
+
+  // Clearing the auto-loaded sample corpus is a pure local operation (no
+  // fetch involved), so it can't perturb the network-evidence assertion
+  // below — it just keeps the later chunk/token-count check unambiguous
+  // (16 sample notes would otherwise also match getByText(/chunk.*tokens/)).
+  await clearSampleCorpus(page);
 
   // Real network evidence: the model + tokenizer were actually fetched
   // from the real CDN, not mocked.

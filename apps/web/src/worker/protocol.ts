@@ -70,10 +70,22 @@ export interface WorkerEmbedTextsDone {
   embeddings: Float32Array[];
 }
 
+/** SPEC.md §8: the live Network Receipt badge. The model/tokenizer/runtime
+ * fetches happen inside this Worker (its own, separate resource-timing
+ * timeline — a dedicated Worker's `PerformanceObserver` never surfaces on
+ * `window.performance`, and vice versa), so the Worker has to report its
+ * own real count back to the main thread rather than the page trying to
+ * observe it directly. `total` is cumulative since the Worker started. */
+export interface WorkerNetworkCount {
+  type: "networkCount";
+  total: number;
+}
+
 export type WorkerResponse =
   | WorkerLoadProgress
   | WorkerLoadDone
   | WorkerLoadError
   | WorkerEmbedNoteDone
   | WorkerEmbedNoteError
-  | WorkerEmbedTextsDone;
+  | WorkerEmbedTextsDone
+  | WorkerNetworkCount;

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { clearSampleCorpus } from "./helpers";
 
 // M3 gate coverage: search returns an ordered list with no visible score,
 // the pairwise-percentile/outlier floors show the right "add N more"
@@ -28,6 +29,7 @@ test("@smoke search, pairwise percentile, and outlier floors behave correctly", 
   // role=status scoped — see real-inference.spec.ts's comment on this
   // exact locator for why a bare getByText(/model: .*ready/) is fragile.
   await expect(page.getByRole("status").filter({ hasText: "ready (" })).toBeVisible({ timeout: 45_000 });
+  await clearSampleCorpus(page);
 
   // Below every floor: all three sections show their "add N more" state,
   // never a silently empty section (SPEC.md §13).

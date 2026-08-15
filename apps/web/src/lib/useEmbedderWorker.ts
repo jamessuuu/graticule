@@ -38,6 +38,12 @@ const initialState: EmbedderState = {
 export function useEmbedderWorker() {
   const workerRef = useRef<Worker | null>(null);
   const [state, setState] = useState<EmbedderState>(initialState);
+  // SPEC.md §8's Network Receipt: cumulative resource-timing entries the
+  // Worker itself has observed (the model/tokenizer/runtime fetches — see
+  // embedder.worker.ts for why this can only be counted there). Kept
+  // separate from EmbedderState, which is about model lifecycle, not
+  // network counting.
+  const [workerNetworkRequests, setWorkerNetworkRequests] = useState(0);
 
   const noteResolvers = useRef(
     new Map<string, { resolve: (v: { chunks: Chunk[]; centroid: Float32Array }) => void; reject: (e: Error) => void }>()
@@ -120,6 +126,9 @@ export function useEmbedderWorker() {
           textResolvers.current.delete(msg.requestId);
           break;
         }
+        case "networkCount":
+          setWorkerNetworkRequests(msg.total);
+          break;
       }
     });
 
@@ -160,5 +169,5 @@ export function useEmbedderWorker() {
     [send]
   );
 
-  return { state, load, embedNote, embedTexts };
+  return { state, load, embedNote, embedTexts, workerNetworkRequests };
 }

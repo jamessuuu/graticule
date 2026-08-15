@@ -5,6 +5,7 @@ import type { DragEvent } from "react";
 import { MAX_NOTES, MAX_TOTAL_CHARACTERS } from "@graticule/core";
 import { ModelLifecycle } from "./ModelLifecycle";
 import { ModelUpgrade } from "./ModelUpgrade";
+import { NetworkReceipt } from "./NetworkReceipt";
 import { Map } from "./Map";
 import { ToastStack } from "./ToastStack";
 import { SearchBox } from "./SearchBox";
@@ -13,6 +14,7 @@ import { useNotesSession } from "@/lib/useNotesSession";
 import { useToasts } from "@/lib/useToasts";
 import { useFileImport } from "@/lib/useFileImport";
 import { useReducedMotion } from "@/lib/useReducedMotion";
+import { useSampleCorpusPreload } from "@/lib/useSampleCorpusPreload";
 import type { Note } from "@graticule/core";
 
 function capMessage(reason: "notes" | "characters"): string {
@@ -109,6 +111,7 @@ export function NoteWorkbench() {
     clearSamples,
     pendingIds,
     embedTexts,
+    workerNetworkRequests,
   } = useNotesSession();
   const { toasts, pushToast, dismissToast } = useToasts();
   const { importFromDrop, importFromFileList, pickFolder, supportsFileSystemAccess } = useFileImport();
@@ -119,6 +122,8 @@ export function NoteWorkbench() {
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
+
+  useSampleCorpusPreload(embedderState, notes.length, addNote);
 
   const canSubmit = embedderState.status === "ready" && draft.trim().length > 0 && !submitting;
 
@@ -200,6 +205,7 @@ export function NoteWorkbench() {
   return (
     <div>
       <ModelLifecycle embedderState={embedderState} load={load} />
+      <NetworkReceipt workerNetworkRequests={workerNetworkRequests} modelReady={embedderState.status === "ready"} />
       <ModelUpgrade embedderState={embedderState} switchModel={switchModel} reembedding={reembedding} noteCount={notes.length} />
 
       <Map notes={notes} reducedMotion={reducedMotion} selectedNoteId={selectedNoteId} onSelectNote={setSelectedNoteId} />

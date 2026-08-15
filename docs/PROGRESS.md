@@ -13,7 +13,7 @@ should look first.
 | M3 | Search + percentile + deterministic clustering + outlier, floors enforced | done |
 | M4 | `/limits` negation demo + `/coverage` wired to real fixture results | done |
 | M5 | Multilingual opt-in (gesture-gated) | done |
-| M6 | Sample corpus + hero + `/methodology` + Network Receipt + `/docs` | not started |
+| M6 | Sample corpus + hero + `/methodology` + Network Receipt + `/docs` | done |
 | M7 | Brand, accessibility pass, isomorphism + network e2e, README, review fixes | not started |
 
 See `docs/DEVIATIONS.md` for every place the implementation departs from
@@ -200,3 +200,69 @@ SPEC.md's literal text, and why.
   stays UNVERIFIED" being about not inventing a *measured threshold*
   number, not about forbidding a forced-failure test of the app's own
   handling.
+- **The hero's sample-corpus auto-preload (M6) is a real, session-wide
+  behaviour change, not just a home-page addition** — every fresh
+  session now auto-embeds 16 sample notes the moment the default model
+  becomes ready (`useSampleCorpusPreload.ts`, fired once via a
+  `triggered` ref, guarded against stomping real content if a visitor
+  somehow pastes before it fires). This broke five already-passing e2e
+  tests that assumed an empty note list at the start (`file-import`,
+  `map-interaction`, `real-inference`, `search-and-analysis`, and one of
+  `multilingual-upgrade`'s two tests) — all fixed the same way, not by
+  weakening the assertions: `e2e/helpers.ts`'s `clearSampleCorpus(page)`
+  waits for all 16 `.tag-sample` notes to finish loading (never
+  partial — the preload's own sequential loop would just re-add whatever
+  it hadn't reached yet if "Clear samples" were clicked mid-load) then
+  clicks "Clear samples" and waits for the count to read back 0. If a
+  new e2e test drives the note-taking form from a fresh page load, it
+  needs this same call before its own logic, or it will silently start
+  from 16 notes instead of 0.
+- **Known, narrow, low-priority UX gap (not fixed): a visitor who clicks
+  "Clear samples" WHILE the initial 16 are still auto-loading (a roughly
+  1-2 second window) will see some samples reappear**, because the
+  preload's `for` loop keeps calling `addNote` for whatever it hasn't
+  reached yet, independent of the clear action. `e2e/helpers.ts` sidesteps
+  this in tests by always waiting for the full 16 before clearing. Worth
+  fixing properly (e.g. a cancellation flag the clear action sets) if this
+  ever becomes a real reported issue; not worth the complexity pre-emptively
+  for a window this narrow with this low a cost (mild confusion, not data
+  loss).
+- **The Network Receipt (`NetworkReceipt.tsx` / `useNetworkReceipt.ts` /
+  `useEmbedderWorker.ts`'s `workerNetworkRequests`) has to be architected
+  around a real browser fact, not a simplification**: a dedicated Worker
+  has its own, independent Resource Timing / `PerformanceObserver`
+  timeline — entries for requests the Worker itself issues (the model,
+  tokenizer, and ONNX runtime fetches) never appear on the main
+  document's `window.performance`, and the reverse is also true. Confirmed
+  empirically while investigating an unrelated e2e byte-count anomaly
+  during M5 (`page.on('response')` also never sees Worker-issued
+  requests). The fix: `embedder.worker.ts` runs its own
+  `PerformanceObserver({type:'resource', buffered:true})` and posts a
+  running total back to the main thread (`networkCount` in `protocol.ts`);
+  `useNetworkReceipt.ts` combines that with its own main-thread observer
+  (page assets, the Worker *script* request itself) into one number, then
+  snapshots a baseline the moment the model first becomes ready so the
+  displayed "N since the map became interactive" is a real, live,
+  falsifiable delta, not a static claim.
+- **`react-hooks/refs` and `react-hooks/set-state-in-effect` (both part of
+  `eslint-plugin-react-hooks@^7.1.1`'s stricter rule set, wired in M4)
+  reject two patterns that used to be common React idiom**: mutating
+  *or reading* a ref during render (even an idempotent, guarded
+  lazy-snapshot) and calling `setState` synchronously inside an effect
+  body. `useNetworkReceipt.ts`'s baseline-snapshot needed a real rewrite,
+  not a disable comment, to satisfy both: it uses react.dev's own
+  documented "adjust state during render" pattern (store `prevModelReady`
+  and `baseline` as plain `useState`, compare-and-set directly in the
+  render body, guarded so it only ever fires once) rather than a ref or
+  an effect. Worth remembering before reaching for `useRef` to "remember
+  something across renders without a re-render" — this codebase's lint
+  config no longer allows reading that ref back during render either.
+- **`/methodology`'s WASM-vs-WebGPU table is honestly incomplete, on
+  purpose.** SPEC.md's own facts line and §9 give real, cited batch=1
+  (8.75x) and batch=32 (1.44x) multipliers but no batch=8 datapoint —
+  the external research doc that measured it (`research/phase2-creative-
+  tech.md §5.2`, per SPEC.md's "Binds to" line) isn't part of this repo.
+  The page states this gap plainly ("not separately measured — see note
+  below") rather than interpolating a plausible-looking number between
+  8.75x and 1.44x, which would be exactly the kind of invented figure the
+  hard rules forbid. See `docs/DEVIATIONS.md` #10.

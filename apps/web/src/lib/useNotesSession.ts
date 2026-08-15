@@ -31,7 +31,7 @@ export type EditNoteResult = { status: "edited" } | { status: "empty" } | { stat
  * `notes` closure yet.
  */
 export function useNotesSession() {
-  const { state: embedderState, load, embedNote, embedTexts } = useEmbedderWorker();
+  const { state: embedderState, load, embedNote, embedTexts, workerNetworkRequests } = useEmbedderWorker();
   const [notes, setNotes] = useState<Note[]>([]);
   const notesRef = useRef<Note[]>([]);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
@@ -176,5 +176,6 @@ export function useNotesSession() {
     clearSamples,
     pendingIds,
     embedTexts,
+    workerNetworkRequests,
   };
 }

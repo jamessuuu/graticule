@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { clearSampleCorpus } from "./helpers";
 
 // M2 gate: "map visibly redraws on edit" — drives the real add/edit/
 // remove/dedupe flow against the real embedder and asserts the map's own
@@ -20,6 +21,7 @@ test.describe("@smoke note workbench + map", () => {
 
     await page.goto("/");
     await waitForModelReady(page);
+    await clearSampleCorpus(page);
 
     const textarea = page.getByLabel("Add a note");
     const addButton = page.getByRole("button", { name: "Add note" });

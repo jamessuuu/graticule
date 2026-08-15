@@ -139,5 +139,21 @@ the call it did, so a future reader isn't left guessing.
    independently against the real system and matched the agent's own
    hand-simulation exactly.
 
+## Incomplete external citation (M6)
+
+10. **`/methodology`'s WASM-vs-WebGPU table has no batch=8 row.** SPEC.md
+    §9 states "`/methodology` states the reason with the actual batch
+    1/8/32 table," but SPEC.md's own text (the facts line + §9) only
+    supplies two of the three datapoints: 8.75x at batch=1 and 1.44x at
+    batch=32. The batch=8 figure lives in an external document this repo
+    binds to (`research/phase2-creative-tech.md §5.2`, per the "Binds to"
+    line) but does not contain. Rather than interpolate a plausible number
+    between 8.75x and 1.44x — which would be exactly the invented-number
+    problem the hard rules exist to prevent — the page states the gap
+    directly: the batch=8 cell reads "not separately measured — see note
+    below," with a caption explaining why. The conclusion that matters for
+    this product (WASM wins at batch=1, the size this app actually uses,
+    decisively) is real and cited either way.
+
 (Entries are appended milestone by milestone, not written in one pass — see
 git log for exactly which commit introduced each one.)

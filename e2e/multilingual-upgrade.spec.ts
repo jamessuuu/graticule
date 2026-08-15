@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { clearSampleCorpus } from "./helpers";
 
 // M5 gate (SPEC.md §17): "Warm reload measured on the deployed site;
 // allocation-failure fallback verified by a forced failure." Two tests:
@@ -37,6 +38,7 @@ test("@smoke multilingual opt-in: real gesture-gated switch, byte-progress, and 
   await page.goto("/");
   const defaultReady = modelStatus.filter({ hasText: "ready (" });
   await expect(defaultReady).toBeVisible({ timeout: 45_000 });
+  await clearSampleCorpus(page);
 
   // Add a note with the default model first, so the switch's "re-embed
   // every chunk" behaviour (SPEC.md §9) is actually exercised, not just
@@ -130,6 +132,7 @@ test("@smoke forced allocation failure on the multilingual load recovers to the 
 
   await page.goto("/");
   await expect(modelStatus.filter({ hasText: "ready (" })).toBeVisible({ timeout: 45_000 });
+  await clearSampleCorpus(page);
 
   const upgradeButton = page.getByRole("button", { name: /Load multilingual model — 140MB/ });
   await upgradeButton.click();

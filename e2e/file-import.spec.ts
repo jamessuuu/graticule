@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { clearSampleCorpus } from "./helpers";
 
 // SPEC.md §7: "Paste or drop files/folder (File System Access API,
 // webkitdirectory fallback)." This exercises the <input type="file"> path
@@ -14,6 +15,7 @@ test("@smoke importing a dropped/chosen .txt file creates a real embedded note",
   // role=status scoped — see real-inference.spec.ts's comment on this
   // exact locator for why a bare getByText(/model: .*ready/) is fragile.
   await expect(page.getByRole("status").filter({ hasText: "ready (" })).toBeVisible({ timeout: 45_000 });
+  await clearSampleCorpus(page);
 
   const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: "Choose files" }).click();
