@@ -10,7 +10,7 @@
  * same embeddings always produce the same axes, satisfying Decision 3
  * exactly.
  */
-import type { ProjectionResult } from "./types.js";
+import type { ProjectionResult } from "./types";
 
 const MAX_ITERATIONS = 500;
 const CONVERGENCE_EPS = 1e-10;

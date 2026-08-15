@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rankBySimilarity } from "../src/rank.js";
+import { rankBySimilarity } from "../src/rank";
 
 function vec(...xs: number[]): Float32Array {
   return new Float32Array(xs);

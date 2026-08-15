@@ -21,8 +21,8 @@
  * legitimately long sentence among several normal ones, which still gets
  * the truncate-and-flag treatment above).
  */
-import { segmentGraphemes, segmentSentences } from "./segment.js";
-import type { Chunk, ChunkOptions, SentenceSpan } from "./types.js";
+import { segmentGraphemes, segmentSentences } from "./segment";
+import type { Chunk, ChunkOptions, SentenceSpan } from "./types";
 
 /** Binary search the largest grapheme-prefix length of `graphemes` (from
  * `startIdx`) whose text satisfies `countTokens(text) <= maxTokens`. Never

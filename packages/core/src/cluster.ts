@@ -13,9 +13,9 @@
  * (linear scan for the minimum each of the ~n merge steps), which is fine
  * at the product's n <= 200 note cap.
  */
-import { cosineSimilarity } from "./similarity.js";
-import type { CentroidItem } from "./pairs.js";
-import type { Cluster } from "./types.js";
+import { cosineSimilarity } from "./similarity";
+import type { CentroidItem } from "./pairs";
+import type { Cluster } from "./types";
 
 const MIN_NOTES = 15;
 

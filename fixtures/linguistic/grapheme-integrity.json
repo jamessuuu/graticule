@@ -1,0 +1,20 @@
+{
+  "id": "grapheme-integrity",
+  "kind": "structural",
+  "input": {
+    "text": "Family day! 👨‍👩‍👧‍👦 We met at the café to celebrate. Zoë brought a rainbow flag 🏳️‍🌈 and gave a thumbs up 👍🏽 to everyone. It was wonderful.",
+    "note": "cafe+COMBINING_ACUTE and Zoe+COMBINING_DIAERESIS are deliberately NFD (base letter + combining mark, e.g. e + U+0301 COMBINING ACUTE ACCENT), not the precomposed single-codepoint form -- the point is testing a *multi-codepoint* grapheme cluster; a precomposed accented letter is trivially one codepoint already and would not exercise the segmenter.",
+    "requiredGraphemeClusters": [
+      "👨‍👩‍👧‍👦",
+      "é",
+      "ë",
+      "🏳️‍🌈",
+      "👍🏽"
+    ]
+  },
+  "assertion": "Every cluster in requiredGraphemeClusters appears as exactly one element of segmentGraphemes(text) -- never split across two elements. Chunking the note (via chunkNote with the real model tokenizer) reconstructs the original text exactly when its chunks are concatenated in order, and no chunk's grapheme span starts or ends in the middle of any required cluster.",
+  "expected": {
+    "graphemeClustersIntact": true,
+    "chunksReconstructExactly": true
+  }
+}

@@ -9,8 +9,8 @@
  * SPEC.md §9): Xenova/paraphrase-multilingual-MiniLM-L12-v2 q8. Warm
  * 763ms, 0 bytes.
  */
-import { TransformersEmbedder } from "./transformersEmbedder.js";
-import type { Embedder } from "./types.js";
+import { TransformersEmbedder } from "./transformersEmbedder";
+import type { Embedder } from "./types";
 
 export const DEFAULT_MODEL_ID = "Xenova/all-MiniLM-L6-v2";
 export const DEFAULT_MODEL_SIZE_MB = 26.8;

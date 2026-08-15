@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSegmenterSupported, segmentGraphemes, segmentSentences } from "../src/segment.js";
+import { isSegmenterSupported, segmentGraphemes, segmentSentences } from "../src/segment";
 
 describe("isSegmenterSupported", () => {
   it("is true in this test environment (Node has Intl.Segmenter)", () => {

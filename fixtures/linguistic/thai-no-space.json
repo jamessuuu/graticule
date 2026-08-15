@@ -1,0 +1,21 @@
+{
+  "id": "thai-no-space",
+  "kind": "structural",
+  "input": {
+    "text": "วันนี้ฉันตื่นแต่เช้าเพราะอากาศดีมากฉันจึงตัดสินใจไปตลาดสดใกล้บ้านเพื่อซื้อผักและผลไม้สำหรับทำอาหารเย็นแม่เคยสอนฉันทำต้มยำตั้งแต่ฉันยังเด็กและฉันยังจำกลิ่นตะไคร้กับข่าได้ทุกครั้งที่เดินผ่านร้านอาหารไทยฉันมักนึกถึงฝีมือทำอาหารของแม่เสมอหลังจากกลับจากตลาดฉันแวะดื่มกาแฟเย็นที่ร้านเล็กๆตรงหัวมุมและคุยกับเจ้าของร้านอยู่พักหนึ่งเขาบอกว่าปีนี้มะม่วงหวานเป็นพิเศษเพราะฝนตกดีจากนั้นฉันเดินกลับบ้านอย่างช้าๆพลางรับลมเย็นและคิดว่าจะทำกับข้าวอะไรให้ครอบครัวกินมื้อเย็นวันนี้เย็นนี้ฉันตั้งใจจะทำต้มยำกุ้งให้เหมือนที่แม่เคยทำเพราะทุกคนในบ้านชอบกินมากเป็นพิเศษและหวังว่าจะได้รสชาติใกล้เคียงกับฝีมือแม่ให้มากที่สุดเท่าที่จะทำได้",
+    "language": "Thai",
+    "gloss": "A first-person narrative (~20 clauses) about an ordinary morning: waking early, going to a fresh market to buy vegetables for dinner, remembering a mother's tom yum recipe, stopping for iced coffee, and planning to cook shrimp tom yum that evening. Authentic Thai has no inter-word spaces and no ASCII sentence-final punctuation, both true here (verified: zero literal space characters, zero ASCII punctuation, single unbroken line -- a stray newline would itself force a segmenter break per Unicode's paragraph-separator rule, defeating the fixture).",
+    "note": "Authored fresh, not scraped/quoted. IMPORTANT, empirically discovered while building this fixture (see docs/DEVIATIONS.md): the real Xenova/all-MiniLM-L6-v2 tokenizer (the shipped DEFAULT model, English-only) collapses this entire 613-character, 458-grapheme run to exactly 1 subword token, decoded as a single [UNK]. Cause: WordPiece pretokenizes on whitespace before subword matching; Thai has none, so the whole run is one 'word' to the tokenizer, and BERT's vocabulary has essentially no Thai coverage, so the greedy WordPiece match fails immediately and the whole word becomes one [UNK] (standard WordPiece behavior on out-of-vocabulary words, not a bug). Confirmed this is model-specific, not Thai-specific: the SAME text against the multilingual model's SentencePiece tokenizer splits into 122 clean word-level tokens. Consequence: chunkNote's 'no sentence boundary in a long run' fallback (triggered by realTokenCount > hardCeiling) can never fire for organic Thai text against the DEFAULT model's real tokenizer, because that count structurally cannot exceed 1 -- it is capped by vocabulary coverage, not content length. This fixture therefore verifies two things separately rather than one thing that isn't reachable as originally phrased: (a) the REAL, measured fact that Intl.Segmenter finds no sentence boundary anywhere in this text (the actual linguistic claim 'no boundary in a long run' rests on), and (b) using a synthetic countTokens (grapheme count, decoupled from the real model's Thai-blind vocabulary) that the chunking ALGORITHM correctly multi-chunks a long single-span run without ever discarding the tail, when its trigger condition is met -- the property SPEC.md's fallback exists to guarantee, verified independent of any one model's vocabulary limitations."
+  },
+  "assertion": "(1) segmentSentences(text) returns exactly one span for the whole note -- Intl.Segmenter finds no internal sentence boundary, the real 'no boundary in a long run' condition. (2) countTokens(text) against the real shipped default-model tokenizer equals exactly 1 (pinned and asserted so a future model swap that changes this is caught, not silently stale -- SPEC.md S9 'Model version bumped: Cold-load numbers must be re-measured before any doc or page cites them again'). (3) Using a synthetic, grapheme-count-based countTokens in place of the real tokenizer, chunkNote() on the same text produces more than one chunk, every chunk's synthetic token count is <=128, no chunk is flagged truncated (nothing is discarded), and concatenating every chunk's text reconstructs the original note exactly.",
+  "expected": {
+    "singleSentenceSpan": true,
+    "realDefaultModelTokenCount": 1,
+    "syntheticFallback": {
+      "minChunkCount": 2,
+      "maxTokensPerChunk": 128,
+      "noneTruncated": true,
+      "reconstructsExactly": true
+    }
+  }
+}

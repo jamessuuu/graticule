@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { outlierNote } from "../src/outlier.js";
+import { outlierNote } from "../src/outlier";
 
 function vec(...xs: number[]): Float32Array {
   return new Float32Array(xs);

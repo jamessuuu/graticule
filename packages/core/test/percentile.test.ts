@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { percentile } from "../src/percentile.js";
+import { percentile } from "../src/percentile";
 
 describe("percentile", () => {
   it("returns null below the 10-pair floor (n < 5 notes)", () => {

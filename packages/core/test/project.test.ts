@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { project, projectOnto } from "../src/project.js";
+import { project, projectOnto } from "../src/project";
 
 function vec(...xs: number[]): Float32Array {
   return new Float32Array(xs);

@@ -58,6 +58,86 @@ the call it did, so a future reader isn't left guessing.
    Next.js/ESLint/Vitest tooling that targets the 5.x compiler API. Not a
    spec pin — SPEC.md doesn't name a TypeScript version — so this is a
    judgment call, not a deviation from a binding line.
+8. **The Worker is pre-built by esbuild (`scripts/build-worker.mjs`), not
+   bundled by Next.js's own compiler.** SPEC.md §11 says `src/worker/`
+   should host model+core off the main thread; it doesn't mandate *how*
+   the Worker gets bundled. The natural approach — `new Worker(new
+   URL('./embedder.worker.ts', import.meta.url), { type: 'module' })` —
+   turned out to be a real, currently-open gap in Next.js 16.3 combined
+   with `output: 'export'`: because `useEmbedderWorker.ts` is a "use
+   client" file that also gets compiled for the static export's
+   server-side prerender pass ("Client Component SSR" in both bundlers'
+   own build output), the worker file gets pulled into that *server*
+   compilation graph too, even though the `new Worker(...)` call itself
+   only ever runs client-side inside a `useEffect`. In that Node-context
+   compilation, `@huggingface/transformers`'s package.json "node" export
+   condition correctly-for-that-context resolves to
+   `transformers.node.mjs`, which imports `onnxruntime-node`'s native
+   `.node` binaries. Turbopack's build (the default) then silently falls
+   back to copying the *raw, uncompiled* `.ts` source into
+   `_next/static/media/` as an opaque asset — a browser cannot execute
+   that. Forcing `next build --webpack` makes the failure loud instead of
+   silent (`Module parse failed` on the native binary) but doesn't fix it.
+   Root-caused, not a config typo — verified by testing both bundlers.
+   Fix: `scripts/build-worker.mjs` compiles `embedder.worker.ts` to
+   `apps/web/public/worker/embedder.worker.js` standalone via esbuild
+   (`platform: 'browser'`, explicit `conditions: ['worker','browser',
+   'import','default']`, so it always resolves transformers.js's browser
+   build), wired into `pnpm run build` before `next build`. The main
+   thread then does `new Worker("/worker/embedder.worker.js", { type:
+   "module" })` — a plain string with no special meaning to Next.js's
+   bundler, so it's never pulled into any Next.js compilation graph at
+   all. Verified end-to-end in a real headless browser
+   (`e2e/real-inference.spec.ts`): real model fetch over the network, real
+   chunking, real embeddings.
+
+## Fixture design correction (real measurement changed the plan mid-build)
+
+9. **`thai-no-space` doesn't test what SPEC.md's one-line description
+   literally implies, and now says so.** §14 states the fixture as "Thai
+   paragraph, no spaces; chunk count > 1, every chunk ≤128 tokens" — read
+   literally, that's a claim about the real default-model tokenizer's
+   behavior on Thai. Building the fixture against real measurement (not
+   assumption) found this claim is unreachable: the shipped default model
+   (`Xenova/all-MiniLM-L6-v2`, English-only BERT/WordPiece) collapses *any*
+   length of unspaced Thai text to exactly one `[UNK]` token — confirmed at
+   20/65/458-grapheme lengths, all landing on 1 token, and confirmed
+   model-specific (not "Thai is hard"): the same text against the
+   multilingual model's SentencePiece tokenizer splits into 122 clean
+   words. Cause: WordPiece pretokenizes on whitespace before subword
+   matching; Thai has none, so the whole run is one "word," and BERT's
+   vocabulary has ~no Thai coverage, so the greedy match fails immediately
+   and the entire word becomes one `[UNK]` (standard WordPiece behavior on
+   out-of-vocabulary input, not a bug in this codebase). Consequence: the
+   fallback's real trigger condition, `countTokens(text) > 128`, can never
+   be satisfied by organic Thai against this specific tokenizer — capped by
+   vocabulary coverage, not content length, so no amount of lengthening the
+   fixture text would ever reach it.
+
+   Fix, not a workaround: `fixtures/linguistic/thai-no-space.json` now
+   asserts three things instead of the original one — (a) the real,
+   measured linguistic fact that stands regardless of tokenizer
+   (`Intl.Segmenter` finds no sentence boundary anywhere in authentic
+   unspaced/unpunctuated Thai — the actual "no boundary in a long run"
+   condition), (b) the real tokenizer's count is pinned at exactly 1 token
+   (so a future model swap that changes this is caught by a failing
+   assertion, not silently missed), and (c) the chunking algorithm's
+   fallback *mechanics* — multi-chunk, non-lossy, exact reconstruction,
+   nothing flagged truncated — verified with a synthetic (grapheme-count)
+   tokenizer decoupled from any one model's vocabulary limits, since that
+   mechanical property is what SPEC.md's fallback exists to guarantee and
+   is real to test even though the real default tokenizer can't trigger it
+   here. `kind` changed from what would have been `"measured"` to
+   `"structural"` to reflect that the fallback-mechanics half is now
+   testing the algorithm, not this specific model's behavior.
+
+   Caught by: dispatching the `computational-linguist` agent to author the
+   CJK/Thai/Taglish fixture content (I am not fluent in any of the three),
+   which ran the actual tokenizer in Node against draft text before
+   handing it back rather than asserting fluency-based confidence. The CJK
+   fixture's numbers (8 sentences, 206 tokens, 4 chunks) were verified
+   independently against the real system and matched the agent's own
+   hand-simulation exactly.
 
 (Entries are appended milestone by milestone, not written in one pass — see
 git log for exactly which commit introduced each one.)

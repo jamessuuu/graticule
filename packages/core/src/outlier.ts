@@ -3,8 +3,8 @@
  * similarity to every other centroid, in full embedding space, never read
  * off the 2D map." Copy: "Uses different wording than the rest."
  */
-import { cosineSimilarity } from "./similarity.js";
-import type { CentroidItem } from "./pairs.js";
+import { cosineSimilarity } from "./similarity";
+import type { CentroidItem } from "./pairs";
 
 const MIN_NOTES = 3;
 

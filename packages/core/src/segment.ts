@@ -4,8 +4,8 @@
  *
  * SPEC.md §3 Decision 2, §13 (Intl.Segmenter unsupported contract).
  */
-import type { GraphemeSpan, SentenceSpan } from "./types.js";
-import { SegmenterUnsupportedError } from "./types.js";
+import type { GraphemeSpan, SentenceSpan } from "./types";
+import { SegmenterUnsupportedError } from "./types";
 
 export function isSegmenterSupported(): boolean {
   return (

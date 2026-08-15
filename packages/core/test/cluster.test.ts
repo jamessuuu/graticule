@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clusterNotes } from "../src/cluster.js";
+import { clusterNotes } from "../src/cluster";
 
 function vec(...xs: number[]): Float32Array {
   return new Float32Array(xs);

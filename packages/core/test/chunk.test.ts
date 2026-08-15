@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { chunkNote } from "../src/chunk.js";
-import { segmentGraphemes } from "../src/segment.js";
-import type { ChunkOptions } from "../src/types.js";
+import { chunkNote } from "../src/chunk";
+import { segmentGraphemes } from "../src/segment";
+import type { ChunkOptions } from "../src/types";
 
 // A simple word-count tokenizer for algorithm tests. Real subword-token
 // semantics (CJK density, Thai truncation, etc.) are covered by the

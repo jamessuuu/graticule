@@ -1,0 +1,17 @@
+{
+  "id": "cjk-no-ascii-punctuation",
+  "kind": "measured",
+  "input": {
+    "text": "今天早上我很早就起床了。天气非常晴朗，阳光透过窗户照进房间。我决定去附近的公园散步，顺便呼吸一下新鲜空气。公园里已经有不少人在锻炼身体，有的在打太极拳，有的在跑步。我沿着湖边慢慢走着，看到几只白色的鸭子在水面上游来游去，样子十分悠闲。走到公园的另一头，我看见一个小市场，很多小贩正在摆摊卖水果和蔬菜。我买了一些新鲜的草莓，准备带回家给家人尝尝。回家的路上，我一边走一边想，这样简单的早晨其实是一天中最快乐的时光。",
+    "language": "Chinese (Simplified Mandarin)",
+    "gloss": "A short first-person narrative about an early morning walk to the park and a market, ending with a reflection on simple mornings -- 8 sentences, using only CJK-native punctuation (。 ideographic full stop, ， fullwidth comma), zero ASCII punctuation anywhere.",
+    "note": "Authored fresh for this fixture, not scraped/quoted from any source. Verified structurally: zero ASCII punctuation (regex over the full string); Intl.Segmenter finds 8 real sentence boundaries at every 。; the real Xenova/all-MiniLM-L6-v2 tokenizer counts 206 total subword tokens (near 1:1 char:token, since BERT's vocab gives most Han characters their own token) -- with maxTokens=80/maxSentences=3, that measures to exactly 4 chunks (53/64/55/34 tokens each), comfortably clearing SPEC.md's literal 'chunk count > 1' assertion without relying on .split('.') or any ASCII-punctuation-based heuristic."
+  },
+  "assertion": "chunkNote() on this text, using the real default-model tokenizer for countTokens, produces more than one chunk (proving sentence segmentation found real boundaries at 。/， without needing an ASCII period to exist), and no resulting chunk's text contains a literal ASCII period -- a naive-splitting regression would either fail to find any boundary (chunk count === 1) or would never occur here in the first place since there is nothing for `.split('.')`-style logic to match.",
+  "expected": {
+    "minChunkCount": 2,
+    "measuredChunkCount": 4,
+    "measuredTotalTokens": 206,
+    "measuredSentenceCount": 8
+  }
+}

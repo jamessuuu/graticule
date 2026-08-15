@@ -2,7 +2,7 @@
  * population `percentile()` and `outlierNote()` are computed against.
  * SPEC.md §5: pairwise/percentile and outlier operate on note centroids,
  * never chunks (Decision 1). */
-import { cosineSimilarity } from "./similarity.js";
+import { cosineSimilarity } from "./similarity";
 
 export interface CentroidItem {
   id: string;

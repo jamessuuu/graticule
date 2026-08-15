@@ -2,7 +2,7 @@
  * Search ranking. SPEC.md §5: "an ordered list, no score." Callers must
  * never surface a similarity number here — only `rank` is returned.
  */
-import { cosineSimilarity } from "./similarity.js";
+import { cosineSimilarity } from "./similarity";
 
 export interface RankedResult {
   id: string;

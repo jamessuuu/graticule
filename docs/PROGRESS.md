@@ -7,8 +7,8 @@ should look first.
 
 | M | Deliverable | Status |
 |---|---|---|
-| M0 | Workspace, TS strict, CI, brand, zero-functions gate, static `/` | in progress |
-| M1 | Chunking core + default embedder in a Worker + first real inference | not started |
+| M0 | Workspace, TS strict, CI, brand, zero-functions gate, static `/` | done |
+| M1 | Chunking core + default embedder in a Worker + first real inference | done |
 | M2 | PCA + dual markers + live typing + paste/drop + NFC dedupe + truncation + caps | not started |
 | M3 | Search + percentile + deterministic clustering + outlier, floors enforced | not started |
 | M4 | `/limits` negation demo + `/coverage` wired to real fixture results | not started |
@@ -18,3 +18,28 @@ should look first.
 
 See `docs/DEVIATIONS.md` for every place the implementation departs from
 SPEC.md's literal text, and why.
+
+## Notes for a resuming session
+
+- **Worker bundling is non-obvious.** The embedder Worker is NOT bundled by
+  Next.js — `scripts/build-worker.mjs` pre-compiles it with esbuild into
+  `apps/web/public/worker/embedder.worker.js`, run as part of `pnpm run
+  build` (before `next build`). If you add imports to `embedder.worker.ts`
+  or its dependency graph, that script is what needs re-running (`pnpm run
+  build:worker`) — `next dev`/`next build` alone won't pick up changes to
+  it. See `docs/DEVIATIONS.md` #8 for the full why.
+- **Fixtures need `tsx`, not plain `node`.** `scripts/verify-fixtures.mjs`
+  (and any future fixture/golden-set script) imports `@graticule/core`
+  and `@graticule/model` by relative path from their TS source — run via
+  `pnpm run fixtures`, which invokes `tsx`, not `node` directly.
+- **The multilingual model's real language list is captured** in
+  `fixtures/coverage/languages.json` (49 codes from the model card's own
+  frontmatter, cited) — includes a `specialCases` entry for Filipino/
+  Tagalog per SPEC.md §10's carve-out (its /coverage row comes from the
+  `code-switch-taglish` fixture's real measurement, not the list).
+- **Taglish fixture content is drafted but not yet in the repo.** 20
+  grammatically-verified Taglish/EN-or-TL-paraphrase pairs are saved in
+  this session's scratchpad (`taglish-draft-content.md`) pending: a
+  localization-specialist/native-speaker authenticity pass, unrelated-
+  sentence distractors, and real threshold measurement — do that work
+  when M4 starts rather than re-requesting the content.
