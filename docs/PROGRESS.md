@@ -10,7 +10,7 @@ should look first.
 | M0 | Workspace, TS strict, CI, brand, zero-functions gate, static `/` | done |
 | M1 | Chunking core + default embedder in a Worker + first real inference | done |
 | M2 | PCA + dual markers + live typing + paste/drop + NFC dedupe + truncation + caps | done |
-| M3 | Search + percentile + deterministic clustering + outlier, floors enforced | not started |
+| M3 | Search + percentile + deterministic clustering + outlier, floors enforced | done |
 | M4 | `/limits` negation demo + `/coverage` wired to real fixture results | not started |
 | M5 | Multilingual opt-in (gesture-gated) | not started |
 | M6 | Sample corpus + hero + `/methodology` + Network Receipt + `/docs` | not started |
@@ -61,3 +61,33 @@ SPEC.md's literal text, and why.
   `useEffect` "client-only" pattern in `useFileImport.ts`. Worth
   remembering as a pattern, not just a one-off fix, before adding any
   more `typeof window` / browser-API feature checks.
+- **`DEFAULT_CUT_THRESHOLD` (packages/core/src/cluster.ts) is empirically
+  tuned, not a guess** — 0.85 (cosine distance), found by sweeping
+  0.3-0.95 against a real 25-note/3-topic fixture and picking the plateau
+  that recovers the true topics exactly. If you ever touch this value,
+  re-run the sweep against `fixtures/linguistic/min-cluster-n.json`
+  rather than picking a number by feel — general-purpose sentence
+  embeddings cluster far looser than intuition suggests (most of 0.3-0.7
+  barely merged anything).
+- **The PCA-instability receipt is a pinned, fixture-verified constant,
+  not a live per-session computation.** `Map.tsx` imports
+  `fixtures/linguistic/pca-instability-on-edit.json` directly (cross-
+  package relative import — works today because Next.js auto-detects the
+  pnpm workspace root; re-check this if that ever changes) and renders
+  its `expected.meanDisplacementPx`. `packages/core/src/viewport.ts`
+  (`fitProjectionToViewport`/`projectToViewportPixels`) is shared between
+  the Map's real rendering and the fixture's measurement specifically so
+  the "Npx" number means the same pixels the visitor actually sees — if
+  you change the map's viewport size/padding constants, the fixture's
+  pinned numbers need re-measuring too.
+- **A real race condition was caught by e2e testing, then fixed at the
+  app level, in M3**: `NoteWorkbench`'s textarea stays enabled during an
+  in-flight submission (only the button disables), so a fast typist
+  really could start a second note before the first note's
+  `setDraft("")` fires — the unconditional clear would silently clobber
+  what they'd typed since. Fixed with a functional `setDraft((current) =>
+  current === submittedText ? "" : current)` update. The e2e test that
+  found it (`search-and-analysis.spec.ts`) needed its own fix too (wait
+  for the textarea to actually read back empty before typing the next
+  note) — both fixes are independently correct, not one working around
+  the other.

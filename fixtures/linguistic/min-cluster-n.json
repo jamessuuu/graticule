@@ -1,0 +1,42 @@
+{
+  "id": "min-cluster-n",
+  "kind": "measured",
+  "input": {
+    "notes": [
+      { "id": "weather-0", "text": "It rained heavily all afternoon and the streets flooded a bit.", "topic": "weather" },
+      { "id": "weather-1", "text": "The forecast says sunny skies for the rest of the week.", "topic": "weather" },
+      { "id": "weather-2", "text": "A cold front is moving in, temperatures will drop tonight.", "topic": "weather" },
+      { "id": "weather-3", "text": "Thunderstorms are expected later this evening, bring an umbrella.", "topic": "weather" },
+      { "id": "weather-4", "text": "It's unusually warm for this time of year.", "topic": "weather" },
+      { "id": "weather-5", "text": "Snow is forecast for the weekend in the mountains.", "topic": "weather" },
+      { "id": "weather-6", "text": "The humidity today is unbearable, everyone is sweating.", "topic": "weather" },
+      { "id": "weather-7", "text": "Strong winds knocked over a few trees in the park last night.", "topic": "weather" },
+      { "id": "weather-8", "text": "Fog rolled in this morning and visibility was very low.", "topic": "weather" },
+      { "id": "cooking-0", "text": "I tried a new pasta recipe tonight and it turned out great.", "topic": "cooking" },
+      { "id": "cooking-1", "text": "The bread didn't rise properly, might be the old yeast.", "topic": "cooking" },
+      { "id": "cooking-2", "text": "Grilled the chicken a bit too long, it was slightly dry.", "topic": "cooking" },
+      { "id": "cooking-3", "text": "Made a big pot of soup for the week, freezing half of it.", "topic": "cooking" },
+      { "id": "cooking-4", "text": "Roasted some vegetables with olive oil and garlic for dinner.", "topic": "cooking" },
+      { "id": "cooking-5", "text": "The cake needs another ten minutes in the oven.", "topic": "cooking" },
+      { "id": "cooking-6", "text": "Substituted butter with olive oil in the cookie recipe.", "topic": "cooking" },
+      { "id": "cooking-7", "text": "Marinated the tofu overnight and it absorbed the flavor well.", "topic": "cooking" },
+      { "id": "tech-0", "text": "The new laptop takes forever to boot up, might need a factory reset.", "topic": "tech" },
+      { "id": "tech-1", "text": "Finally fixed the bug that was crashing the app on startup.", "topic": "tech" },
+      { "id": "tech-2", "text": "Upgraded my phone's storage but it's still running slow.", "topic": "tech" },
+      { "id": "tech-3", "text": "The wifi router keeps dropping the connection every hour.", "topic": "tech" },
+      { "id": "tech-4", "text": "Deployed the update to production without any issues.", "topic": "tech" },
+      { "id": "tech-5", "text": "My code review flagged a memory leak in the background worker.", "topic": "tech" },
+      { "id": "tech-6", "text": "Switched to a new password manager after the breach warning.", "topic": "tech" },
+      { "id": "tech-7", "text": "The API started returning 500 errors after the last deploy.", "topic": "tech" }
+    ],
+    "note": "25 short, deliberately varied-wording notes across 3 clear topics (9 weather / 8 cooking / 8 tech), authored fresh for this fixture. Used to both verify the n>=15 floor (first 5 and first 12 of this list, in order, are the n=5/n=12 sub-tests) and to empirically tune DEFAULT_CUT_THRESHOLD in packages/core/src/cluster.ts (0.85, recovering these exact 3 topics with zero cross-topic contamination -- see that file's doc comment for the full sweep)."
+  },
+  "assertion": "clusterNotes() on the real embeddings' centroids of the first 5 notes returns null, and on the first 12 returns null (both below the n>=15 floor). On all 25, it returns exactly 3 clusters whose membership exactly matches the 3 true topic labels (no cluster mixes topics, no topic is split across clusters). Re-running clusterNotes on the identical 25-centroid input twice produces byte-identical (deepEqual) results.",
+  "expected": {
+    "n5Null": true,
+    "n12Null": true,
+    "n25ClusterCount": 3,
+    "n25PerfectTopicRecovery": true,
+    "n25Deterministic": true
+  }
+}

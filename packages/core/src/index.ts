@@ -11,3 +11,4 @@ export * from "./cluster";
 export * from "./outlier";
 export * from "./dedupe";
 export * from "./caps";
+export * from "./viewport";

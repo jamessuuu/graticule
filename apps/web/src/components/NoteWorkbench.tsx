@@ -6,6 +6,8 @@ import { MAX_NOTES, MAX_TOTAL_CHARACTERS } from "@graticule/core";
 import { ModelLifecycle } from "./ModelLifecycle";
 import { Map } from "./Map";
 import { ToastStack } from "./ToastStack";
+import { SearchBox } from "./SearchBox";
+import { SessionAnalysis } from "./SessionAnalysis";
 import { useNotesSession } from "@/lib/useNotesSession";
 import { useToasts } from "@/lib/useToasts";
 import { useFileImport } from "@/lib/useFileImport";
@@ -94,7 +96,7 @@ function NoteRow({
 }
 
 export function NoteWorkbench() {
-  const { embedderState, load, notes, addNote, editNote, removeNote, clearSamples, pendingIds } = useNotesSession();
+  const { embedderState, load, notes, addNote, editNote, removeNote, clearSamples, pendingIds, embedTexts } = useNotesSession();
   const { toasts, pushToast, dismissToast } = useToasts();
   const { importFromDrop, importFromFileList, pickFolder, supportsFileSystemAccess } = useFileImport();
   const reducedMotion = useReducedMotion();
@@ -123,10 +125,18 @@ export function NoteWorkbench() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
+    const submittedText = draft;
     setSubmitting(true);
     try {
-      const result = await submitNote(draft);
-      if (result.status === "added") setDraft("");
+      const result = await submitNote(submittedText);
+      if (result.status === "added") {
+        // Only clear if the draft still holds what we just submitted —
+        // a functional update reads the *current* state, not the stale
+        // closure, so it doesn't clobber text the visitor started typing
+        // while this submission's embed was still in flight (a real race
+        // caught by e2e testing, not a hypothetical).
+        setDraft((current) => (current === submittedText ? "" : current));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -261,6 +271,9 @@ export function NoteWorkbench() {
           }} />
         ))}
       </ul>
+
+      <SearchBox notes={notes} embedTexts={embedTexts} ready={embedderState.status === "ready"} />
+      <SessionAnalysis notes={notes} />
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>

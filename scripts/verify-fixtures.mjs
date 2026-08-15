@@ -19,7 +19,19 @@
 import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { chunkNote, cosineSimilarity, isDuplicateText, segmentGraphemes, segmentSentences } from "../packages/core/src/index.ts";
+import {
+  centroid,
+  chunkNote,
+  clusterNotes,
+  cosineSimilarity,
+  fitProjectionToViewport,
+  isDuplicateText,
+  project,
+  projectOnto,
+  projectToViewportPixels,
+  segmentGraphemes,
+  segmentSentences,
+} from "../packages/core/src/index.ts";
 import { createDefaultEmbedder } from "../packages/model/src/embedders.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -204,6 +216,111 @@ const verifiers = {
     );
 
     return { unflaggedChunkCount: unflaggedChunks.length, flaggedChunkCount: flaggedChunks.length, cosineTruncatedVsFull: cosine };
+  },
+
+  "min-cluster-n": async (fixture, ctx) => {
+    const { notes } = fixture.input;
+    const { n5Null, n12Null, n25ClusterCount, n25PerfectTopicRecovery, n25Deterministic } = fixture.expected;
+
+    async function centroidsFor(subset) {
+      const out = [];
+      for (const n of subset) {
+        const chunks = chunkNote(n.text, { ...CHUNK_OPTS_BASE, countTokens: ctx.countTokens, noteId: n.id });
+        const embeddings = await ctx.embedder.embed(chunks.map((c) => c.text));
+        out.push({ id: n.id, embedding: centroid(embeddings) });
+      }
+      return out;
+    }
+
+    const c5 = await centroidsFor(notes.slice(0, 5));
+    assert((clusterNotes(c5) === null) === n5Null, "expected clusterNotes(n=5) to be null (below the n>=15 floor)");
+
+    const c12 = await centroidsFor(notes.slice(0, 12));
+    assert((clusterNotes(c12) === null) === n12Null, "expected clusterNotes(n=12) to be null (below the n>=15 floor)");
+
+    const c25 = await centroidsFor(notes);
+    const clusters25 = clusterNotes(c25);
+    assert(clusters25 !== null, "expected clusterNotes(n=25) to return real clusters, got null");
+    assert(
+      clusters25.length === n25ClusterCount,
+      `expected ${n25ClusterCount} clusters at n=25, got ${clusters25.length}`
+    );
+
+    const topicById = new Map(notes.map((n) => [n.id, n.topic]));
+    const perfectRecovery = clusters25.every((cluster) => {
+      const topics = new Set(cluster.memberNoteIds.map((id) => topicById.get(id)));
+      return topics.size === 1;
+    });
+    assert(
+      perfectRecovery === n25PerfectTopicRecovery,
+      "expected every cluster at n=25 to contain exactly one true topic (zero cross-topic contamination)"
+    );
+
+    const clusters25Again = clusterNotes(c25);
+    const deterministic =
+      JSON.stringify(clusters25.map((c) => [...c.memberNoteIds].sort())) ===
+      JSON.stringify(clusters25Again.map((c) => [...c.memberNoteIds].sort()));
+    assert(deterministic === n25Deterministic, "re-running clusterNotes on identical input should be deterministic");
+
+    return { n25ClusterCount: clusters25.length, sizes: clusters25.map((c) => c.memberNoteIds.length) };
+  },
+
+  "pca-instability-on-edit": async (fixture, ctx) => {
+    const { tenNotes, eleventhNote, viewportSize, viewportPadding } = fixture.input;
+    const { meanDisplacementPx, maxDisplacementPx, toleranceAbsolutePx, deterministic } = fixture.expected;
+
+    async function embedNoteTexts(texts) {
+      const out = [];
+      for (let i = 0; i < texts.length; i++) {
+        const chunks = chunkNote(texts[i], { ...CHUNK_OPTS_BASE, countTokens: ctx.countTokens, noteId: `n${i}` });
+        const embeddings = await ctx.embedder.embed(chunks.map((c) => c.text));
+        out.push({ id: `n${i}`, chunks: embeddings, centroid: centroid(embeddings) });
+      }
+      return out;
+    }
+
+    function projectNotes(notes) {
+      const allChunkEmbeddings = notes.flatMap((n) => n.chunks);
+      const fitted = project(allChunkEmbeddings);
+      const centroidCoords = projectOnto(fitted, notes.map((n) => n.centroid));
+      return notes.map((n, i) => ({ id: n.id, x: centroidCoords[i][0], y: centroidCoords[i][1] }));
+    }
+
+    const notesBefore = await embedNoteTexts(tenNotes);
+    const coordsBefore = projectNotes(notesBefore);
+
+    const notesAfter = await embedNoteTexts([...tenNotes, eleventhNote]);
+    const coordsAfterAll = projectNotes(notesAfter);
+    const coordsAfter = coordsAfterAll.filter((c) => c.id !== "n10");
+
+    const fitBefore = fitProjectionToViewport(coordsBefore, viewportSize, viewportPadding);
+    const fitAfter = fitProjectionToViewport(coordsAfterAll, viewportSize, viewportPadding);
+
+    const displacements = coordsBefore.map((c, i) => {
+      const pxBefore = projectToViewportPixels(c, fitBefore);
+      const pxAfter = projectToViewportPixels(coordsAfter[i], fitAfter);
+      const dx = pxAfter.x - pxBefore.x;
+      const dy = pxAfter.y - pxBefore.y;
+      return Math.sqrt(dx * dx + dy * dy);
+    });
+    const mean = displacements.reduce((a, b) => a + b, 0) / displacements.length;
+    const max = Math.max(...displacements);
+
+    assert(
+      Math.abs(mean - meanDisplacementPx) <= toleranceAbsolutePx,
+      `mean displacement drifted: pinned ${meanDisplacementPx}px, measured ${mean.toFixed(2)}px (tolerance ${toleranceAbsolutePx}px) — re-measure and update the fixture + the on-page receipt (Map.tsx) if this is a real, intended algorithm change`
+    );
+    assert(
+      Math.abs(max - maxDisplacementPx) <= toleranceAbsolutePx,
+      `max displacement drifted: pinned ${maxDisplacementPx}px, measured ${max.toFixed(2)}px (tolerance ${toleranceAbsolutePx}px)`
+    );
+
+    const notesBeforeAgain = await embedNoteTexts(tenNotes);
+    const coordsBeforeAgain = projectNotes(notesBeforeAgain);
+    const isDeterministic = coordsBefore.every((c, i) => c.x === coordsBeforeAgain[i].x && c.y === coordsBeforeAgain[i].y);
+    assert(isDeterministic === deterministic, "re-running the before-state projection twice should be byte-identical");
+
+    return { meanDisplacementPx: Number(mean.toFixed(2)), maxDisplacementPx: Number(max.toFixed(2)) };
   },
 };
 

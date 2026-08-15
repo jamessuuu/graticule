@@ -2,10 +2,13 @@
 
 import { useMemo, useState } from "react";
 import type { Note } from "@graticule/core";
-import { project, projectOnto } from "@graticule/core";
+import { fitProjectionToViewport, project, projectOnto, projectToViewportPixels } from "@graticule/core";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import instabilityReceipt from "../../../../fixtures/linguistic/pca-instability-on-edit.json";
 
 const PROJECTION_DEBOUNCE_MS = 300;
+export const MAP_VIEWPORT_SIZE = 600;
+export const MAP_VIEWPORT_PADDING = 40;
 
 export interface MapProps {
   notes: Note[];
@@ -48,20 +51,6 @@ export function computeProjection(notes: Note[]): MapProjection | null {
   return { chunkCoords, noteCoords, varianceExplainedPct };
 }
 
-const VIEWBOX = 600;
-const PADDING = 40;
-
-function fitToViewbox(points: Array<{ x: number; y: number }>): { scale: number; cx: number; cy: number } {
-  if (points.length === 0) return { scale: 1, cx: 0, cy: 0 };
-  let maxAbs = 0;
-  for (const p of points) {
-    maxAbs = Math.max(maxAbs, Math.abs(p.x), Math.abs(p.y));
-  }
-  if (maxAbs === 0) maxAbs = 1;
-  const usable = VIEWBOX / 2 - PADDING;
-  return { scale: usable / maxAbs, cx: VIEWBOX / 2, cy: VIEWBOX / 2 };
-}
-
 /** The live map. Chunks render smaller and lighter, note centroids larger
  * and solid — "the granularity must be legible on the map itself, not
  * only in a tooltip" (SPEC.md §3). `prefers-reduced-motion`: transitions
@@ -83,14 +72,18 @@ export function Map({ notes, reducedMotion, selectedNoteId, onSelectNote }: MapP
     );
   }
 
-  const { scale, cx, cy } = fitToViewbox([...projection.chunkCoords, ...projection.noteCoords]);
-  const toSvg = (x: number, y: number) => ({ x: cx + x * scale, y: cy - y * scale });
+  const fit = fitProjectionToViewport(
+    [...projection.chunkCoords, ...projection.noteCoords],
+    MAP_VIEWPORT_SIZE,
+    MAP_VIEWPORT_PADDING
+  );
+  const toSvg = (x: number, y: number) => projectToViewportPixels({ x, y }, fit);
   const transitionStyle = reducedMotion ? { transition: "none" } : { transition: "cx 0.3s ease, cy 0.3s ease" };
 
   return (
     <figure className="map-figure">
       <svg
-        viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}
+        viewBox={`0 0 ${MAP_VIEWPORT_SIZE} ${MAP_VIEWPORT_SIZE}`}
         role="img"
         aria-label={`Map of ${notes.length} notes, positioned by wording similarity. A text list of closest pairs is available below as the accessible equivalent.`}
         style={{ width: "100%", height: "auto", background: "var(--paper)", border: "1px solid var(--line)" }}
@@ -143,7 +136,13 @@ export function Map({ notes, reducedMotion, selectedNoteId, onSelectNote }: MapP
         entirely in your browser — nothing you paste is sent anywhere. Position is relative to what you&apos;ve
         pasted and will shift as you add or remove notes; it is not a fixed or absolute measurement.
       </figcaption>
-      <p className="receipt-row">These two axes capture {projection.varianceExplainedPct}% of the variation.</p>
+      <p className="receipt-row">
+        <span>These two axes capture {projection.varianceExplainedPct}% of the variation.</span>
+        <span>
+          Adding one note moved existing points by an average of {Math.round(instabilityReceipt.expected.meanDisplacementPx)}
+          px in a fixture measurement — position is not stable across edits.
+        </span>
+      </p>
     </figure>
   );
 }

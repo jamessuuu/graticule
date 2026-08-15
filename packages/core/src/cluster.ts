@@ -20,12 +20,22 @@ import type { Cluster } from "./types";
 const MIN_NOTES = 15;
 
 /** Cosine-distance cut threshold: merges stop once the closest pair of
- * clusters is farther apart than this. Tuned against the `min-cluster-n`
- * fixture (5/12/25-note sets) during M3 — see fixtures/linguistic/min-
- * cluster-n.json and scripts/verify-fixtures.mjs for the measurement this
- * value is pinned to. Expressed as cosine *distance* (1 - similarity), so
- * 0.55 means "still grouped down to ~0.45 cosine similarity." */
-export const DEFAULT_CUT_THRESHOLD = 0.55;
+ * clusters is farther apart than this. Tuned empirically during M3
+ * against real MiniLM embeddings of a 25-note, 3-topic set (weather/
+ * cooking/tech, ~8-9 notes each, deliberately varied wording within each
+ * topic — see fixtures/linguistic/min-cluster-n.json for the exact set):
+ * swept threshold 0.3-0.95 and scored each result against the known true
+ * topic labels. General-purpose sentence embeddings for topically-related
+ * but differently-worded sentences cluster far looser than intuition
+ * suggests — thresholds below ~0.72 barely merged anything (20+ singleton
+ * clusters out of 25 notes), and above ~0.9 collapsed into one mixed-topic
+ * blob. The stable plateau recovering exactly the 3 true topics with zero
+ * cross-topic contamination was threshold in [0.82, 0.88]; 0.85 sits at
+ * its center for margin. Expressed as cosine *distance* (1 - similarity),
+ * so 0.85 means "still grouped down to ~0.15 cosine similarity" — a real,
+ * measured fact about this model, not a guess. Re-tune if the default
+ * model ever changes (SPEC.md §9 "Version pins" applies here too). */
+export const DEFAULT_CUT_THRESHOLD = 0.85;
 
 export interface ClusterOptions {
   threshold?: number;

@@ -1,0 +1,29 @@
+{
+  "id": "pca-instability-on-edit",
+  "kind": "measured",
+  "input": {
+    "tenNotes": [
+      "It rained heavily all afternoon and the streets flooded a bit.",
+      "The forecast says sunny skies for the rest of the week.",
+      "A cold front is moving in, temperatures will drop tonight.",
+      "I tried a new pasta recipe tonight and it turned out great.",
+      "The bread didn't rise properly, might be the old yeast.",
+      "Grilled the chicken a bit too long, it was slightly dry.",
+      "The new laptop takes forever to boot up, might need a factory reset.",
+      "Finally fixed the bug that was crashing the app on startup.",
+      "Upgraded my phone's storage but it's still running slow.",
+      "My favorite hiking trail closes for the winter next month."
+    ],
+    "eleventhNote": "The wifi router keeps dropping the connection every hour.",
+    "viewportSize": 600,
+    "viewportPadding": 40,
+    "note": "Fixed 10 topically-mixed notes (weather/cooking/tech/other, deliberately not a single tight topic, so PCA has real structure to find), then an 11th added. Measured: refit project() over all 10 notes' chunks, record each note centroid's pixel position via the SAME fitProjectionToViewport/projectToViewportPixels transform Map.tsx renders with (600x600 viewport, 40px padding) -- then refit over all 11 notes' chunks, re-read the ORIGINAL 10 notes' pixel positions under the new fit, and measure per-note Euclidean pixel displacement. The measured mean (252px) is large relative to the 600px canvas -- confirmed not a bug: with only 10-11 points, refitting PCA genuinely can rotate the axes and (via the viewport's own auto-scaling to fit the new extremum) rescale everything, both of which are real effects a visitor actually sees on screen, which is exactly why SPEC.md's disclosure exists ('position is relative... will shift as you add or remove notes; it is not a fixed or absolute measurement')."
+  },
+  "assertion": "Re-fitting the PCA projection after adding one note to a fixed 10-note set, then re-reading the original 10 notes' pixel positions (same viewport transform as the live map), produces a measured mean displacement and max displacement within a small tolerance of the pinned values below -- if the chunking, embedding, or PCA algorithm ever changes enough to move these numbers meaningfully, this assertion fails loudly rather than letting the on-page copy (which reads this same file's pinned meanDisplacementPx) go stale. Re-running the whole measurement twice on the identical 10-note input produces byte-identical centroid coordinates (determinism).",
+  "expected": {
+    "meanDisplacementPx": 252.24,
+    "maxDisplacementPx": 469.52,
+    "toleranceAbsolutePx": 5,
+    "deterministic": true
+  }
+}
