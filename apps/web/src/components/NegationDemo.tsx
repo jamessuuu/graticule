@@ -24,24 +24,24 @@ function PairBox({ label, a, b, onChangeA, onChangeB, cosine, modelId, computing
     <div style={{ border: "1px solid var(--line-strong)", borderRadius: 2, padding: "1rem" }}>
       <h3 style={{ marginTop: 0, fontSize: "0.95rem" }}>{label}</h3>
       <label style={{ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem" }}>
-        Text A
+        {label} — Text A
         <textarea
           value={a}
           onChange={(e) => onChangeA(e.target.value)}
           rows={2}
-          style={{ width: "100%", padding: "0.5rem", border: "1px solid var(--line)", borderRadius: 2, marginTop: "0.25rem" }}
+          style={{ width: "100%", padding: "0.5rem", border: "1px solid var(--line-strong)", borderRadius: 2, marginTop: "0.25rem" }}
         />
       </label>
       <label style={{ display: "block", fontSize: "0.85rem", margin: "0.5rem 0 0.25rem" }}>
-        Text B
+        {label} — Text B
         <textarea
           value={b}
           onChange={(e) => onChangeB(e.target.value)}
           rows={2}
-          style={{ width: "100%", padding: "0.5rem", border: "1px solid var(--line)", borderRadius: 2, marginTop: "0.25rem" }}
+          style={{ width: "100%", padding: "0.5rem", border: "1px solid var(--line-strong)", borderRadius: 2, marginTop: "0.25rem" }}
         />
       </label>
-      <p className="receipt-row" style={{ marginTop: "0.75rem" }}>
+      <p className="receipt-row" role="status" style={{ marginTop: "0.75rem" }}>
         {computing ? (
           "computing…"
         ) : cosine !== null && modelId ? (
@@ -147,7 +147,7 @@ export function NegationDemo() {
         />
       </div>
       {contraCosine !== null && paraCosine !== null && (
-        <p className="disclosure" style={{ marginTop: "1rem" }}>
+        <p className="disclosure" role="status" style={{ marginTop: "1rem" }}>
           {contraCosine >= paraCosine
             ? "Right now the contradiction scores as similar as — or more similar than — the genuine paraphrase. The model has no notion of “true” or “false”; it only measures how similar the wording is."
             : "The contradiction still scores highly similar despite being the opposite claim — cosine similarity does not distinguish a statement from its negation."}

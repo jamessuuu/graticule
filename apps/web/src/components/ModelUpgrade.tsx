@@ -59,19 +59,19 @@ export function ModelUpgrade({ embedderState, switchModel, reembedding, noteCoun
   return (
     <div className="callout" style={{ marginTop: "1rem" }}>
       {isMultilingualError && (
-        <p style={{ marginTop: 0 }}>
-          {embedderState.isAllocationFailure
-            ? "This device couldn't load the multilingual model (likely a memory limit)."
-            : `The multilingual model failed to load: ${embedderState.error}`}
-        </p>
-      )}
-      {isMultilingualError && (
-        <p style={{ marginTop: 0 }}>
-          <button type="button" onClick={() => switchModel("default")}>
-            Continue with the smaller default model
-          </button>{" "}
-          — nothing you&apos;ve pasted so far was affected; it was embedded with the default model already.
-        </p>
+        <div role="alert">
+          <p style={{ marginTop: 0 }}>
+            {embedderState.isAllocationFailure
+              ? "This device couldn't load the multilingual model (likely a memory limit)."
+              : `The multilingual model failed to load: ${embedderState.error}`}
+          </p>
+          <p style={{ marginTop: 0 }}>
+            <button type="button" onClick={() => switchModel("default")}>
+              Continue with the smaller default model
+            </button>{" "}
+            — nothing you&apos;ve pasted so far was affected; it was embedded with the default model already.
+          </p>
+        </div>
       )}
       <p style={{ marginTop: 0 }}>
         Everything above runs on an English-tuned model. For other languages, you can load a larger multilingual

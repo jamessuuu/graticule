@@ -24,7 +24,7 @@
     "serve:static": "node scripts/serve-static.mjs",
     "e2e:smoke": "playwright test --grep @smoke",
     "e2e:full": "playwright test",
-    "ci": "pnpm run typecheck && pnpm run lint && pnpm run unit && pnpm run fixtures && pnpm run build && pnpm run e2e:full"
+    "ci": "pnpm run typecheck && pnpm run lint && pnpm run unit && pnpm run fixtures && pnpm run chunking-golden && pnpm run determinism && pnpm run build && pnpm run e2e:full"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

@@ -88,6 +88,11 @@ export function SearchBox({ notes, embedTexts, ready }: SearchBoxProps) {
       </p>
 
       {results && (
+        <p className="receipt-row" role="status">
+          {results.length} result{results.length === 1 ? "" : "s"}.
+        </p>
+      )}
+      {results && (
         <ol style={{ marginTop: "1rem", paddingLeft: "1.5rem" }}>
           {results.map((r) => (
             <li key={`${r.noteId}-${r.rank}`} style={{ marginBottom: "0.5rem" }}>

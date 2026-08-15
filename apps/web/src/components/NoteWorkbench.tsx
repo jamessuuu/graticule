@@ -41,6 +41,7 @@ function NoteRow({
     return (
       <li style={{ borderTop: "1px solid var(--line)", padding: "0.75rem 0" }}>
         <textarea
+          aria-label="Edit note text"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           rows={3}

@@ -1,0 +1,280 @@
+{
+  "id": "chunking-golden",
+  "description": "SPEC.md §16: a chunking golden set of >=20 realistic cases (English/CJK/Thai/RTL/mixed) with committed expected chunk counts and truncation flags. Every 'expected' field below is measured against the real shipped default model's tokenizer (scripts/verify-chunking-golden.mjs), not guessed -- several entries reuse text already verified in fixtures/linguistic/*.json rather than re-authoring content that already has a real, reviewed provenance.",
+  "cases": [
+    {
+      "id": "en-short-single-sentence",
+      "script": "Latin (English)",
+      "text": "Grabbed coffee on the way to the office this morning.",
+      "note": "Shortest realistic case: one short sentence, well under every threshold.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 11
+      }
+    },
+    {
+      "id": "en-two-sentences",
+      "script": "Latin (English)",
+      "text": "The printer on the third floor is out of toner again. Someone should really just replace the whole thing.",
+      "note": "Two short sentences, comfortably one chunk.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 22
+      }
+    },
+    {
+      "id": "en-three-sentences-at-boundary",
+      "script": "Latin (English)",
+      "text": "Finished the first draft of the proposal today. It's rougher than I'd like. I'll clean it up tomorrow before sending it out.",
+      "note": "Exactly maxSentences (3) — should still fit in one chunk since token count stays well under 80.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 32
+      }
+    },
+    {
+      "id": "en-four-sentences-forces-split",
+      "script": "Latin (English)",
+      "text": "Woke up early today. Went for a short run around the block. Made a big breakfast afterward. Feeling pretty good about the day so far.",
+      "note": "Four short sentences — maxSentences=3 should force a chunk boundary after the third, regardless of token budget headroom.",
+      "expected": {
+        "chunkCount": 2,
+        "truncatedChunkCount": 0,
+        "totalTokens": 29
+      }
+    },
+    {
+      "id": "en-long-run-on-exceeds-hard-ceiling",
+      "script": "Latin (English)",
+      "text": "I was thinking that before the trip next month we should probably go through the whole apartment room by room and figure out what actually needs to be packed versus what can just stay in storage until we get back, because last time we ended up bringing way too much and most of it never even left the suitcase, and on top of that we still need to confirm the dates with the landlord, sort out who's picking up the mail while we're away, decide whether to board the cat or ask a neighbor to check in twice a day, renew the travel insurance before it lapses, print out the itinerary in case the phone battery dies at some point, and probably also double check that the passports haven't expired since neither of us has actually looked at the dates in years.",
+      "note": "One grammatical but long run-on sentence (comma/conjunction-joined clauses, no internal sentence-final punctuation), 159 real tokens against the shipped tokenizer, well over the 128-token hard ceiling. REAL MEASURED FINDING, corrected from an initial wrong assumption while authoring this fixture: because Intl.Segmenter finds exactly one sentence spanning the *entire* note (there is nothing else around it to accumulate), chunkNote() takes the same no-boundary-fallback path thai-full-no-space does below (multi-chunk, never flagged truncated, nothing discarded) -- not the mid-note truncate-and-flag path. That other path (a long sentence sitting among shorter ones) is already covered by fixtures/linguistic/truncation-boundary.json, which deliberately prepends a short intro sentence before its own long one specifically to land in the *other* branch. Kept here, corrected rather than replaced, because a Latin-script example of the no-boundary fallback (distinct from Thai's script-driven reason for having none) is real, useful golden-set coverage in its own right.",
+      "expected": {
+        "chunkCount": 2,
+        "truncatedChunkCount": 0,
+        "totalTokens": 159
+      }
+    },
+    {
+      "id": "en-one-word",
+      "script": "Latin (English)",
+      "text": "Done.",
+      "note": "Minimal realistic note.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 2
+      }
+    },
+    {
+      "id": "en-semicolon-and-colon",
+      "script": "Latin (English)",
+      "text": "Grocery list: milk, eggs, bread, and coffee; also need to stop by the pharmacy for a refill.",
+      "note": "Colon and semicolon inside one sentence — must not be mistaken for sentence-final punctuation by segmentation.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 24
+      }
+    },
+    {
+      "id": "cjk-full-narrative",
+      "script": "Chinese (Simplified Mandarin)",
+      "text": "今天早上我很早就起床了。天气非常晴朗，阳光透过窗户照进房间。我决定去附近的公园散步，顺便呼吸一下新鲜空气。公园里已经有不少人在锻炼身体，有的在打太极拳，有的在跑步。我沿着湖边慢慢走着，看到几只白色的鸭子在水面上游来游去，样子十分悠闲。走到公园的另一头，我看见一个小市场，很多小贩正在摆摊卖水果和蔬菜。我买了一些新鲜的草莓，准备带回家给家人尝尝。回家的路上，我一边走一边想，这样简单的早晨其实是一天中最快乐的时光。",
+      "note": "Reused verbatim from fixtures/linguistic/cjk-no-ascii-punctuation.json — already independently verified (real tokenizer, real sentence count) rather than re-authored. 8 sentences, zero ASCII punctuation.",
+      "expected": {
+        "chunkCount": 4,
+        "truncatedChunkCount": 0,
+        "totalTokens": 206
+      }
+    },
+    {
+      "id": "cjk-short-single-sentence",
+      "script": "Chinese (Simplified Mandarin)",
+      "text": "今天早上我很早就起床了。",
+      "note": "A single short sentence excerpted from the same narrative — the short-CJK-note counterpart to the long one above.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 12
+      }
+    },
+    {
+      "id": "thai-full-no-space",
+      "script": "Thai",
+      "text": "วันนี้ฉันตื่นแต่เช้าเพราะอากาศดีมากฉันจึงตัดสินใจไปตลาดสดใกล้บ้านเพื่อซื้อผักและผลไม้สำหรับทำอาหารเย็นแม่เคยสอนฉันทำต้มยำตั้งแต่ฉันยังเด็กและฉันยังจำกลิ่นตะไคร้กับข่าได้ทุกครั้งที่เดินผ่านร้านอาหารไทยฉันมักนึกถึงฝีมือทำอาหารของแม่เสมอหลังจากกลับจากตลาดฉันแวะดื่มกาแฟเย็นที่ร้านเล็กๆตรงหัวมุมและคุยกับเจ้าของร้านอยู่พักหนึ่งเขาบอกว่าปีนี้มะม่วงหวานเป็นพิเศษเพราะฝนตกดีจากนั้นฉันเดินกลับบ้านอย่างช้าๆพลางรับลมเย็นและคิดว่าจะทำกับข้าวอะไรให้ครอบครัวกินมื้อเย็นวันนี้เย็นนี้ฉันตั้งใจจะทำต้มยำกุ้งให้เหมือนที่แม่เคยทำเพราะทุกคนในบ้านชอบกินมากเป็นพิเศษและหวังว่าจะได้รสชาติใกล้เคียงกับฝีมือแม่ให้มากที่สุดเท่าที่จะทำได้",
+      "note": "Reused verbatim from fixtures/linguistic/thai-no-space.json. Real, surprising, already-documented finding kept as-is: the shipped default (English-only) tokenizer collapses this whole run to a single [UNK] token, which is <= the hard ceiling -- so against the REAL default tokenizer this golden-set case takes the ordinary single-chunk path, not the no-boundary-fallback path (that fallback is exercised separately in thai-no-space.json using a synthetic tokenizer, since the real one structurally can never trigger it here). Included specifically because a golden set that only showed the 'nice' cases would hide this.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 1
+      }
+    },
+    {
+      "id": "mixed-taglish-1",
+      "script": "Latin (Taglish code-switching)",
+      "text": "Grabe, ang dami kong deadline this week, parang hindi ako makakatulog.",
+      "note": "Reused verbatim from fixtures/linguistic/code-switch-taglish.json item 1 (Tagalog/English code-switching within a single sentence) -- already localization-reviewed.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 22
+      }
+    },
+    {
+      "id": "mixed-taglish-2",
+      "script": "Latin (Taglish code-switching)",
+      "text": "Sinabi ni boss na kailangan i-submit yung report bago mag-Friday, kaya mag-OT ako mamaya.",
+      "note": "Reused verbatim from fixtures/linguistic/code-switch-taglish.json item 2.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 30
+      }
+    },
+    {
+      "id": "mixed-taglish-3",
+      "script": "Latin (Taglish code-switching)",
+      "text": "Balak ko sanang mag-enroll ulit sa gym, para may gagawin ako after work kesa nakaupo lang buong araw.",
+      "note": "Reused verbatim from fixtures/linguistic/code-switch-taglish.json item 12.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 32
+      }
+    },
+    {
+      "id": "mixed-taglish-4",
+      "script": "Latin (Taglish code-switching)",
+      "text": "Pag-uwi ko galing trabaho, sana matulog na lang ako agad kasi ang hirap ng araw ko ngayon.",
+      "note": "Reused verbatim from fixtures/linguistic/code-switch-taglish.json item 13.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 37
+      }
+    },
+    {
+      "id": "ar-short-1",
+      "script": "Arabic (MSA, undiacritized)",
+      "text": "يجب أن أشتري الحليب غدا.",
+      "gloss": "I need to buy milk tomorrow.",
+      "note": "Drafted by the computational-linguist agent (M7), a non-native speaker: 'well-attested, high-frequency construction, confident it's grammatical standard-register prose' -- disclosed as strong-but-non-native, same disclosure discipline as the Thai/CJK fixtures in M1.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 20
+      }
+    },
+    {
+      "id": "ar-short-2-verbless",
+      "script": "Arabic (MSA, undiacritized)",
+      "text": "الاجتماع في الساعة العاشرة صباحا.",
+      "gloss": "The meeting is at ten in the morning.",
+      "note": "Verbless nominal sentence (Arabic doesn't use a copula here) -- per the drafting agent, grammatically correct as written, not missing a word.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 29
+      }
+    },
+    {
+      "id": "ar-medium-compound-1",
+      "script": "Arabic (MSA, undiacritized)",
+      "text": "نسيت أن أرد على البريد الإلكتروني، لذلك سأفعل ذلك غدا صباحا.",
+      "gloss": "I forgot to reply to the email, so I'll do that tomorrow morning.",
+      "note": "Medium compound sentence with an internal Arabic comma (،), single sentence overall.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 50
+      }
+    },
+    {
+      "id": "ar-medium-compound-2",
+      "script": "Arabic (MSA, undiacritized)",
+      "text": "قررت أن أبدأ الجري كل صباح لأنني أريد تحسين لياقتي البدنية.",
+      "gloss": "I decided to start running every morning because I want to improve my physical fitness.",
+      "note": "Medium compound sentence, causal clause.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 48
+      }
+    },
+    {
+      "id": "ar-long-complex",
+      "script": "Arabic (MSA, undiacritized)",
+      "text": "على الرغم من أنني كنت متعبا جدا بعد العمل، إلا أنني ذهبت إلى السوق لشراء الخضروات والفواكه التي نحتاجها لعشاء الليلة.",
+      "gloss": "Although I was very tired after work, I still went to the market to buy the vegetables and fruits we need for tonight's dinner.",
+      "note": "Longer complex sentence with a concessive clause -- the drafting agent specifically checked the plural-to-feminine-singular verb agreement on تي...نحتاجها as a real Arabic grammar rule, not a typo.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 97
+      }
+    },
+    {
+      "id": "he-short-1",
+      "script": "Hebrew (undiacritized)",
+      "text": "אני צריך לקנות חלב מחר.",
+      "gloss": "I need to buy milk tomorrow.",
+      "note": "Drafted by the computational-linguist agent (M7), a non-native speaker -- disclosed as strong-but-non-native.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 19
+      }
+    },
+    {
+      "id": "he-short-2-verbless",
+      "script": "Hebrew (undiacritized)",
+      "text": "הפגישה בשעה עשר בבוקר.",
+      "gloss": "The meeting is at ten in the morning.",
+      "note": "Copula omitted -- correct default for Hebrew, not missing a word.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 19
+      }
+    },
+    {
+      "id": "he-medium-compound-1",
+      "script": "Hebrew (undiacritized)",
+      "text": "שכחתי לענות למייל, אז אני אעשה את זה מחר בבוקר.",
+      "gloss": "I forgot to reply to the email, so I'll do that tomorrow morning.",
+      "note": "Uses the real colloquial word people type for \"email\" (מייל), not the formal דוא\"ל, per the drafting agent.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 38
+      }
+    },
+    {
+      "id": "he-medium-compound-2",
+      "script": "Hebrew (undiacritized)",
+      "text": "החלטתי להתחיל לרוץ כל בוקר, כי אני רוצה להשתפר בכושר הגופני שלי.",
+      "gloss": "I decided to start running every morning because I want to improve my physical fitness.",
+      "note": "Medium compound sentence, causal clause.",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 53
+      }
+    },
+    {
+      "id": "he-long-complex",
+      "script": "Hebrew (undiacritized)",
+      "text": "למרות שהייתי מאוד עייף אחרי העבודה, בכל זאת הלכתי לסופר לקנות ירקות ופירות לארוחת הערב.",
+      "gloss": "Although I was very tired after work, I still went to the supermarket to buy vegetables and fruits for dinner.",
+      "note": "Longer complex sentence with a concessive clause. The drafting agent originally added a trailing word it could not corpus-verify and cut it rather than ship an unverified guess -- this is the corrected, higher-confidence version, cross-checked against real usage (ynet, Hebrew Wikipedia).",
+      "expected": {
+        "chunkCount": 1,
+        "truncatedChunkCount": 0,
+        "totalTokens": 73
+      }
+    }
+  ]
+}

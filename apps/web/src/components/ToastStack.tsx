@@ -39,7 +39,21 @@ export function ToastStack({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: 
             type="button"
             onClick={() => onDismiss(toast.id)}
             aria-label="Dismiss"
-            style={{ background: "none", border: "none", color: "var(--paper)", cursor: "pointer", fontSize: "1rem", lineHeight: 1 }}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--paper)",
+              cursor: "pointer",
+              fontSize: "1rem",
+              lineHeight: 1,
+              minWidth: "44px",
+              minHeight: "44px",
+              padding: "0.5rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
           >
             ×
           </button>

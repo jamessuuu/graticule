@@ -14,7 +14,7 @@ should look first.
 | M4 | `/limits` negation demo + `/coverage` wired to real fixture results | done |
 | M5 | Multilingual opt-in (gesture-gated) | done |
 | M6 | Sample corpus + hero + `/methodology` + Network Receipt + `/docs` | done |
-| M7 | Brand, accessibility pass, isomorphism + network e2e, README, review fixes | not started |
+| M7 | Brand, accessibility pass, isomorphism + network e2e, README, review fixes | done |
 
 See `docs/DEVIATIONS.md` for every place the implementation departs from
 SPEC.md's literal text, and why.
@@ -266,3 +266,114 @@ SPEC.md's literal text, and why.
   below") rather than interpolating a plausible-looking number between
   8.75x and 1.44x, which would be exactly the kind of invented figure the
   hard rules forbid. See `docs/DEVIATIONS.md` #10.
+
+## M7 notes
+
+- **The chunking golden set (`fixtures/chunking-golden.json`, 24 cases —
+  floor is >=20) mixes freshly-authored and reused content deliberately.**
+  English cases are original; the CJK and Thai cases are reused verbatim
+  from the already-verified M1 fixtures rather than re-authored (no reason
+  to duplicate content that already has a real, reviewed provenance); the
+  "mixed" cases are 4 items reused from `code-switch-taglish.json`; the RTL
+  (Arabic/Hebrew) cases were drafted by the `computational-linguist` agent,
+  a self-disclosed non-native speaker, with one phrase corrected mid-draft
+  because the agent couldn't corpus-verify it and cut it rather than ship
+  a guess — same disclosure discipline as the Thai/CJK content in M1. One
+  English case (`en-long-run-on-exceeds-hard-ceiling`) revealed a real,
+  worth-knowing chunking-algorithm fact while being authored: a single
+  128+-token sentence with *nothing else in the note* takes the
+  no-boundary-fallback path (multi-chunk, never flagged truncated), not
+  the mid-note truncate-and-flag path — those are two genuinely different
+  code paths in `chunkNote()`, both real, both now covered.
+- **The determinism eval (`scripts/verify-determinism.mjs`) needed to
+  read `packages/core/src/chunk.ts` first to get the claim right**:
+  `chunkNote()` does not normalize its input text at all (no NFC
+  call anywhere), so an NFD-encoded note is a genuinely different byte
+  sequence from its NFC form — the honest claim is "chunk structure is
+  identical, embeddings are near-identical (cosine >= 0.999)," not
+  byte-identical anything. The order-shuffle check re-associates each
+  note's projected coordinate by its own id, not by array position,
+  before comparing — `project()`'s `coords` array order tracks input
+  order even though the fitted PCA basis itself doesn't depend on it, so
+  comparing by index would find a trivial, meaningless "difference" that
+  is really just the shuffle.
+- **The isomorphism e2e (SPEC.md §14, ±0.01 cosine) and the network-tab
+  e2e (SPEC.md §16, zero requests carrying pasted text) are deliberately
+  separate tests from the Network Receipt's own e2e coverage** — the
+  receipt only counts requests, it doesn't inspect what they contain.
+  `e2e/isomorphism-and-network-content.spec.ts`'s second test pastes a
+  single distinctive canary string, then adds/searches/edits it, and
+  asserts the string never appears in any request URL, query string, or
+  body — the literal SPEC.md §8 falsification condition, checked directly
+  rather than inferred from the receipt staying flat.
+- **A real accessibility-engineer dispatch found four must-fix and four
+  should-fix WCAG issues from a source-only read (no browser tools in
+  that dispatch) — all fixed, not just logged:**
+  - `NoteWorkbench.tsx`'s inline-edit textarea had no accessible name —
+    added `aria-label="Edit note text"`.
+  - `NegationDemo.tsx`'s textarea borders used `--line` against `--paper`
+    (~1.39:1, needs 3:1 for a UI-component boundary) — swapped to
+    `--line-strong`; its two "Text A"/"Text B" labels were identical
+    across both pair-boxes (ambiguous in a screen-reader's forms list) —
+    prefixed with the pair's own label ("Contradiction — Text A"); the
+    live-recomputed cosine and verdict paragraphs had no live region —
+    both got `role="status"`.
+  - **`Map.tsx`'s per-note markers claimed `role="button"`/keyboard
+    support they could not actually deliver**: an interactive role nested
+    inside the map SVG's own `role="img"` is flattened out of the
+    accessibility tree by that ancestor role (a real, verified browser
+    behaviour, not a guess) — a sighted keyboard user could still Tab
+    there via raw DOM focus, but a screen-reader user could never
+    discover or operate it, so the old markup was a false promise, worse
+    than not claiming it. Fixed by splitting each marker into two SVG
+    circles inside a `<g data-testid="map-note-marker">`: an invisible,
+    larger (24px, SC 2.5.8) hit-target circle carrying the real
+    `onClick`/hover handlers for sighted mouse/touch users, and the
+    visible dot underneath with `pointerEvents: "none"` and no
+    interactive role at all. Selecting a marker only ever enlarged its
+    own dot (verified — nothing else read `selectedNoteId`), so removing
+    the fake keyboard path loses no real functionality; the map's actual
+    accessible equivalent remains `SessionAnalysis`'s text list, per
+    SPEC.md §15. Verified live (not just by the passing e2e suite): a
+    real Tab-key walkthrough now goes straight from the "Load
+    multilingual model" button to the note textarea, skipping the map
+    entirely, instead of getting stuck cycling through N dead circle
+    "buttons." **e2e note:** `file-import.spec.ts` and
+    `map-interaction.spec.ts` counted markers via
+    `svg[role="img"] [role="button"]`, which this fix makes match
+    nothing — both now use the `[data-testid="map-note-marker"]` test
+    hook instead (a plain test attribute, not an accessibility one).
+  - `SearchBox.tsx` results had no count announcement — added a
+    `role="status"` "`N results.`" line. `ModelUpgrade.tsx`'s failure
+    copy had no live region (inconsistent with `ModelLifecycle.tsx`'s
+    equivalent `role="alert"`) — wrapped in one. `ToastStack.tsx`'s
+    icon-only dismiss button had no minimum touch-target sizing — given
+    `min-width`/`min-height: 44px`.
+  - Contrast on `--paper` for every other token, reduced-motion coverage,
+    landmark/heading structure, and every other form label were already
+    verified correct by the same dispatch — not re-litigated here.
+- **QUALITY-BAR's "renders at 320px" caught a real bug, not a
+  hypothetical one**: `/coverage`'s 4-column table (including a long
+  free-text "evidence" column) forced the *entire page* to scroll
+  horizontally at 320px, not just the table. Fixed by wrapping both
+  `/coverage`'s and `/methodology`'s tables in their own
+  `overflow-x: auto` container with a `min-width` on the `<table>` — the
+  table scrolls internally now, the page never does. Locked in with
+  `e2e/quality-bar.spec.ts`, which checks all 5 routes at a real 320px
+  viewport for zero page-level horizontal overflow, so this can't
+  silently regress.
+- **The OG image (`apps/web/src/app/opengraph-image.tsx`) needed
+  `export const dynamic = "force-static"`** to build under
+  `output: "export"` — Next.js's static-export mode refuses to collect
+  page data for an image-generation route without it, even with no
+  dynamic params. Rebuilds the exact grid-plus-off-intersection-amber-
+  point geometry `scripts/brand.mjs` uses, as plain positioned `<div>`s
+  rather than inline SVG — `next/og`'s Satori renderer supports that more
+  reliably than raw `<svg>` markup. Real 1200x630 PNG, generated once at
+  build time (confirmed: `apps/web/out/opengraph-image`, valid PNG,
+  ~24KB), not per-request.
+- **"Portfolio entry" (SPEC.md §17's M7 deliverable) is out of scope for
+  this repo** — it refers to the separate `agentjames` portfolio site,
+  which the hard rules explicitly forbid touching from a graticule
+  session ("touch nothing outside `C:\Users\admin\graticule`"). Left for
+  a human decision outside this build.

@@ -43,36 +43,38 @@ export default function CoveragePage() {
         merged with this project&apos;s real fixture results — generated at build time, never hand-typed.
       </p>
 
-      <table style={{ marginTop: "1.5rem" }}>
-        <thead>
-          <tr>
-            <th>Language</th>
-            <th>BCP-47</th>
-            <th>Status</th>
-            <th>Evidence</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((e) => (
-            <tr key={e.bcp47}>
-              <td>{e.language}</td>
-              <td>
-                <code>{e.bcp47}</code>
-              </td>
-              <td className={`status-${e.status}`}>{statusLabel[e.status]}</td>
-              <td style={{ fontSize: "0.85rem", color: "var(--ink-soft)" }}>
-                {e.evidence}
-                {e.note ? (
-                  <>
-                    <br />
-                    <em>{e.note}</em>
-                  </>
-                ) : null}
-              </td>
+      <div style={{ overflowX: "auto", marginTop: "1.5rem" }}>
+        <table style={{ minWidth: "560px" }}>
+          <thead>
+            <tr>
+              <th>Language</th>
+              <th>BCP-47</th>
+              <th>Status</th>
+              <th>Evidence</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {entries.map((e) => (
+              <tr key={e.bcp47}>
+                <td>{e.language}</td>
+                <td>
+                  <code>{e.bcp47}</code>
+                </td>
+                <td className={`status-${e.status}`}>{statusLabel[e.status]}</td>
+                <td style={{ fontSize: "0.85rem", color: "var(--ink-soft)" }}>
+                  {e.evidence}
+                  {e.note ? (
+                    <>
+                      <br />
+                      <em>{e.note}</em>
+                    </>
+                  ) : null}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <p className="disclosure" style={{ marginTop: "1.5rem" }}>
         Every language above except English is only tuned per the underlying model&apos;s training, not

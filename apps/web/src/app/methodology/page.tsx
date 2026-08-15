@@ -38,28 +38,30 @@ export default function MethodologyPage() {
         fallback ladder in the code because none is needed: `device: &quot;wasm&quot;` is used
         unconditionally.
       </p>
-      <table style={{ marginTop: "1rem" }}>
-        <thead>
-          <tr>
-            <th>Batch size</th>
-            <th>WASM vs. WebGPU</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>1 (this product&apos;s actual usage)</td>
-            <td>WASM 8.75x faster</td>
-          </tr>
-          <tr>
-            <td>8</td>
-            <td style={{ color: "var(--ink-soft)" }}>not separately measured — see note below</td>
-          </tr>
-          <tr>
-            <td>32</td>
-            <td>WASM 1.44x faster (narrowing, but WebGPU never crosses over)</td>
-          </tr>
-        </tbody>
-      </table>
+      <div style={{ overflowX: "auto", marginTop: "1rem" }}>
+        <table style={{ minWidth: "480px" }}>
+          <thead>
+            <tr>
+              <th>Batch size</th>
+              <th>WASM vs. WebGPU</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1 (this product&apos;s actual usage)</td>
+              <td>WASM 8.75x faster</td>
+            </tr>
+            <tr>
+              <td>8</td>
+              <td style={{ color: "var(--ink-soft)" }}>not separately measured — see note below</td>
+            </tr>
+            <tr>
+              <td>32</td>
+              <td>WASM 1.44x faster (narrowing, but WebGPU never crosses over)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <p className="disclosure" style={{ marginTop: "0.75rem" }}>
         This build&apos;s own source material (SPEC.md) pins the batch=1 and batch=32 figures above along
         with a general &quot;WASM beats WebGPU 8-17x at batch=1&quot; range across both models — a

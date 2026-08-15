@@ -25,5 +25,10 @@ test("@smoke importing a dropped/chosen .txt file creates a real embedded note",
   await expect(page.getByText("This note came from a dropped text file rather than being typed directly.")).toBeVisible({
     timeout: 15_000,
   });
-  await expect(page.locator('svg[role="img"] [role="button"]')).toHaveCount(1);
+  // data-testid, not role="button" — an interactive role nested inside
+  // the map's own role="img" ancestor gets flattened out of the
+  // accessibility tree (M7 accessibility pass), so the markers
+  // deliberately no longer claim a role they can't actually deliver on
+  // for AT users. This is a plain test hook, not an a11y attribute.
+  await expect(page.locator('[data-testid="map-note-marker"]')).toHaveCount(1);
 });

@@ -105,29 +105,36 @@ export function Map({ notes, reducedMotion, selectedNoteId, onSelectNote }: MapP
         {projection.noteCoords.map((n) => {
           const { x, y } = toSvg(n.x, n.y);
           const isActive = n.noteId === selectedNoteId || n.noteId === hoveredNoteId;
+          const select = () => onSelectNote?.(n.noteId === selectedNoteId ? null : n.noteId);
           return (
-            <circle
-              key={n.noteId}
-              cx={x}
-              cy={y}
-              r={isActive ? 9 : 7}
-              fill="var(--ink)"
-              stroke={isActive ? "var(--amber)" : "none"}
-              strokeWidth={2}
-              style={{ cursor: "pointer", ...transitionStyle }}
-              onMouseEnter={() => setHoveredNoteId(n.noteId)}
-              onMouseLeave={() => setHoveredNoteId(null)}
-              onClick={() => onSelectNote?.(n.noteId === selectedNoteId ? null : n.noteId)}
-              tabIndex={0}
-              role="button"
-              aria-label={`Note ${n.noteId}`}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onSelectNote?.(n.noteId === selectedNoteId ? null : n.noteId);
-                }
-              }}
-            />
+            <g key={n.noteId} data-testid="map-note-marker">
+              {/* Invisible, larger hit target (SC 2.5.8: 24px minimum for
+                  a pointer-operable control) — the visible dot below stays
+                  its own smaller radius; this only exists to make it
+                  actually clickable/tappable at a reasonable size. */}
+              <circle cx={x} cy={y} r={12} fill="transparent" style={{ cursor: "pointer" }} onMouseEnter={() => setHoveredNoteId(n.noteId)} onMouseLeave={() => setHoveredNoteId(null)} onClick={select} />
+              {/* Mouse-only visual affordance, deliberately not exposed as
+                  a keyboard/AT control: an interactive role nested inside
+                  this svg's own role="img" is flattened out of the
+                  accessibility tree by that ancestor role (verified during
+                  the M7 accessibility pass) — DOM focus/tabIndex would
+                  still work for a sighted keyboard user, but a screen-
+                  reader user could never discover or operate it, so
+                  claiming role="button" here was a false promise, not a
+                  real affordance. Selecting a point only enlarges its own
+                  dot (no other effect), so removing the fake keyboard path
+                  loses nothing SessionAnalysis's text-list equivalent
+                  doesn't already cover. */}
+              <circle
+                cx={x}
+                cy={y}
+                r={isActive ? 9 : 7}
+                fill="var(--ink)"
+                stroke={isActive ? "var(--amber)" : "none"}
+                strokeWidth={2}
+                style={{ pointerEvents: "none", ...transitionStyle }}
+              />
+            </g>
           );
         })}
       </svg>
