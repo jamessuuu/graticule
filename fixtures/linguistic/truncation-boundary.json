@@ -1,0 +1,21 @@
+{
+  "id": "truncation-boundary",
+  "kind": "measured",
+  "input": {
+    "unflaggedText": "The quarterly review went smoothly this time. Every department submitted their numbers on time, which almost never happens. The finance team highlighted a small overspend in travel costs, but nothing alarming. Marketing reported a modest increase in qualified leads compared to last quarter. Engineering finished two of the three planned features and pushed the third to next sprint. Everyone agreed the meeting could have been thirty minutes shorter. Afterward, a few of us grabbed coffee and talked about weekend plans instead of work for a change, which felt like a nice way to close out the week.",
+    "flaggedIntro": "Quick summary first.",
+    "flaggedLongSentenceVocab": [
+      "budget", "timeline", "vendor", "proposal", "engineering", "roadmap", "stakeholder",
+      "feedback", "meeting", "schedule", "review", "deadline", "client", "feature",
+      "release", "testing", "design", "backlog", "priority", "update"
+    ],
+    "flaggedLongSentenceWordCount": 170,
+    "note": "unflaggedText measures ~97 words / 3 untruncated chunks with the real tokenizer. The flagged note is built as flaggedIntro + a synthesized ~194-word run-on sentence (170 repeating-vocabulary words wrapped in a real opening/closing clause) with a period only at the very end, which real-measures to 2 sentences (4 tokens / 227 tokens) and 2 chunks (untruncated intro, truncated 128-token long chunk)."
+  },
+  "assertion": "The ~90-word note produces zero truncated chunks. The ~180-word note produces exactly one truncated chunk, whose text is a strict grapheme-prefix of (shorter than) the original long sentence -- and, the direct proof that the note's position derives only from what was actually embedded, not the discarded tail: cosine similarity between the truncated chunk's real embedding and a separate embedding of the FULL untruncated long sentence is well below 1.0 (i.e., meaningfully different content, not a silent pass-through) -- if a regression ever embedded the full text despite the truncated flag, this would read as ~1.0 / byte-identical instead.",
+  "expected": {
+    "unflaggedHasNoTruncatedChunks": true,
+    "flaggedHasExactlyOneTruncatedChunk": true,
+    "maxCosineTruncatedVsFullSentence": 0.98
+  }
+}

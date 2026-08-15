@@ -1,0 +1,14 @@
+{
+  "id": "nfc-nfd-pair",
+  "kind": "measured",
+  "input": {
+    "nfcText": "The café owner served a fresh croissant and a well-known résumé tip to every regular guest.",
+    "nfdText": "The café owner served a fresh croissant and a well-known résumé tip to every regular guest.",
+    "note": "Same sentence, two Unicode normalization forms of the same accented words (cafe->e-acute, resume->e-acute...e-acute). Generated via .normalize('NFC')/.normalize('NFD') on a common base string, not hand-typed in both forms directly -- typing supposedly-different forms by hand proved byte-inconsistent while building the M1 grapheme-integrity fixture, so this fixture is script-generated instead."
+  },
+  "assertion": "Embedding both forms with the real default model produces cosine similarity >= 0.999 (SPEC.md's 'cosine ~=1.0' -- measured at effectively exact 1.0, since the tokenizer's own normalizer canonicalizes both forms identically before subword matching). isDuplicateText (packages/core) correctly identifies each form as a duplicate of the other after its own NFC-normalizing comparison, independent of the embedding check.",
+  "expected": {
+    "minCosineSimilarity": 0.999,
+    "dedupeCollapsesThem": true
+  }
+}

@@ -1,0 +1,149 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import type { Note } from "@graticule/core";
+import { project, projectOnto } from "@graticule/core";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+
+const PROJECTION_DEBOUNCE_MS = 300;
+
+export interface MapProps {
+  notes: Note[];
+  reducedMotion: boolean;
+  selectedNoteId?: string | null;
+  onSelectNote?: (noteId: string | null) => void;
+}
+
+export interface MapProjection {
+  chunkCoords: Array<{ noteId: string; chunkId: string; x: number; y: number; truncated: boolean }>;
+  noteCoords: Array<{ noteId: string; x: number; y: number }>;
+  varianceExplainedPct: number;
+}
+
+/** SPEC.md §4 Decision 3: PCA over the full chunk matrix; centroids
+ * projected onto the same axes. Recomputed whenever the note set changes
+ * (the caller debounces at 300ms per the spec — see NoteWorkbench). */
+export function computeProjection(notes: Note[]): MapProjection | null {
+  const allChunks = notes.flatMap((n) => n.chunks);
+  if (allChunks.length === 0) return null;
+
+  const fitted = project(allChunks.map((c) => c.embedding));
+  const chunkCoords = allChunks.map((c, i) => ({
+    noteId: c.noteId,
+    chunkId: c.id,
+    x: fitted.coords[i]![0],
+    y: fitted.coords[i]![1],
+    truncated: c.truncated,
+  }));
+
+  const centroidCoords = projectOnto(fitted, notes.map((n) => n.centroid));
+  const noteCoords = notes.map((n, i) => ({
+    noteId: n.id,
+    x: centroidCoords[i]![0],
+    y: centroidCoords[i]![1],
+  }));
+
+  const varianceExplainedPct = Math.round((fitted.varianceExplained[0] + fitted.varianceExplained[1]) * 100);
+
+  return { chunkCoords, noteCoords, varianceExplainedPct };
+}
+
+const VIEWBOX = 600;
+const PADDING = 40;
+
+function fitToViewbox(points: Array<{ x: number; y: number }>): { scale: number; cx: number; cy: number } {
+  if (points.length === 0) return { scale: 1, cx: 0, cy: 0 };
+  let maxAbs = 0;
+  for (const p of points) {
+    maxAbs = Math.max(maxAbs, Math.abs(p.x), Math.abs(p.y));
+  }
+  if (maxAbs === 0) maxAbs = 1;
+  const usable = VIEWBOX / 2 - PADDING;
+  return { scale: usable / maxAbs, cx: VIEWBOX / 2, cy: VIEWBOX / 2 };
+}
+
+/** The live map. Chunks render smaller and lighter, note centroids larger
+ * and solid — "the granularity must be legible on the map itself, not
+ * only in a tooltip" (SPEC.md §3). `prefers-reduced-motion`: transitions
+ * snap instead of tweening (§4). */
+export function Map({ notes, reducedMotion, selectedNoteId, onSelectNote }: MapProps) {
+  const [hoveredNoteId, setHoveredNoteId] = useState<string | null>(null);
+  // 300ms debounce per SPEC.md §4 Decision 3 — the note list/chunk counts
+  // elsewhere on the page still update immediately; only the map's own
+  // recompute (and its "N% of variation" receipt) lags briefly behind a
+  // burst of add/remove/edit calls.
+  const debouncedNotes = useDebouncedValue(notes, PROJECTION_DEBOUNCE_MS);
+  const projection = useMemo(() => computeProjection(debouncedNotes), [debouncedNotes]);
+
+  if (!projection) {
+    return (
+      <div className="map-empty" role="status">
+        <p>Add a note to see the map.</p>
+      </div>
+    );
+  }
+
+  const { scale, cx, cy } = fitToViewbox([...projection.chunkCoords, ...projection.noteCoords]);
+  const toSvg = (x: number, y: number) => ({ x: cx + x * scale, y: cy - y * scale });
+  const transitionStyle = reducedMotion ? { transition: "none" } : { transition: "cx 0.3s ease, cy 0.3s ease" };
+
+  return (
+    <figure className="map-figure">
+      <svg
+        viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}
+        role="img"
+        aria-label={`Map of ${notes.length} notes, positioned by wording similarity. A text list of closest pairs is available below as the accessible equivalent.`}
+        style={{ width: "100%", height: "auto", background: "var(--paper)", border: "1px solid var(--line)" }}
+      >
+        {projection.chunkCoords.map((c) => {
+          const { x, y } = toSvg(c.x, c.y);
+          return (
+            <circle
+              key={c.chunkId}
+              cx={x}
+              cy={y}
+              r={3}
+              fill={c.truncated ? "var(--amber)" : "var(--line-strong)"}
+              opacity={0.35}
+              style={transitionStyle}
+            />
+          );
+        })}
+        {projection.noteCoords.map((n) => {
+          const { x, y } = toSvg(n.x, n.y);
+          const isActive = n.noteId === selectedNoteId || n.noteId === hoveredNoteId;
+          return (
+            <circle
+              key={n.noteId}
+              cx={x}
+              cy={y}
+              r={isActive ? 9 : 7}
+              fill="var(--ink)"
+              stroke={isActive ? "var(--amber)" : "none"}
+              strokeWidth={2}
+              style={{ cursor: "pointer", ...transitionStyle }}
+              onMouseEnter={() => setHoveredNoteId(n.noteId)}
+              onMouseLeave={() => setHoveredNoteId(null)}
+              onClick={() => onSelectNote?.(n.noteId === selectedNoteId ? null : n.noteId)}
+              tabIndex={0}
+              role="button"
+              aria-label={`Note ${n.noteId}`}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelectNote?.(n.noteId === selectedNoteId ? null : n.noteId);
+                }
+              }}
+            />
+          );
+        })}
+      </svg>
+      <figcaption className="disclosure">
+        This map places your notes by how similar their wording is, using a small language model that runs
+        entirely in your browser — nothing you paste is sent anywhere. Position is relative to what you&apos;ve
+        pasted and will shift as you add or remove notes; it is not a fixed or absolute measurement.
+      </figcaption>
+      <p className="receipt-row">These two axes capture {projection.varianceExplainedPct}% of the variation.</p>
+    </figure>
+  );
+}

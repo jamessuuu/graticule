@@ -1,34 +1,72 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { Note, NoteSource } from "@graticule/core";
+import { checkCaps, isDuplicateText } from "@graticule/core";
 import { useEmbedderWorker } from "./useEmbedderWorker";
 
 function makeNoteId(): string {
   return `note-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+export type AddNoteResult =
+  | { status: "added"; note: Note }
+  | { status: "empty" }
+  | { status: "duplicate" }
+  | { status: "capped"; reason: "notes" | "characters" };
+
+export type EditNoteResult = { status: "edited" } | { status: "empty" } | { status: "duplicate" } | { status: "not-found" };
+
 /**
  * Owns the session's notes (Decision 9: session-only, in-memory, no
- * persistence). M1 lands add-only; M2 adds NFC dedupe, caps, edit/remove.
+ * persistence). SPEC.md §7: "Every add/edit/remove re-chunks, re-embeds
+ * only the changed note." §7 caps (200 notes / 200,000 characters,
+ * clear refusal). §7 dedupe (exact match after NFC, toast not a silent
+ * duplicate).
+ *
+ * Uses a ref mirror of `notes` alongside the state so add/edit can
+ * synchronously check caps/dedupe against the latest set even though a
+ * React state update from a moment ago may not have flushed to the
+ * `notes` closure yet.
  */
 export function useNotesSession() {
   const { state: embedderState, load, embedNote, embedTexts } = useEmbedderWorker();
   const [notes, setNotes] = useState<Note[]>([]);
+  const notesRef = useRef<Note[]>([]);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
 
+  const setNotesBoth = useCallback((updater: (prev: Note[]) => Note[]) => {
+    setNotes((prev) => {
+      const next = updater(prev);
+      notesRef.current = next;
+      return next;
+    });
+  }, []);
+
   const addNote = useCallback(
-    async (text: string, source: NoteSource = "visitor"): Promise<Note | null> => {
+    async (text: string, source: NoteSource = "visitor"): Promise<AddNoteResult> => {
       const trimmed = text.trim();
-      if (trimmed.length === 0) return null;
+      if (trimmed.length === 0) return { status: "empty" };
+
+      const current = notesRef.current;
+      if (isDuplicateText(trimmed, current.map((n) => n.text))) {
+        return { status: "duplicate" };
+      }
+      const capResult = checkCaps(
+        { noteCount: current.length, totalCharacters: current.reduce((s, n) => s + n.text.length, 0) },
+        trimmed
+      );
+      if (!capResult.allowed) {
+        return { status: "capped", reason: capResult.reason };
+      }
 
       const id = makeNoteId();
       setPendingIds((p) => new Set(p).add(id));
       try {
         const { chunks, centroid } = await embedNote(id, trimmed);
         const note: Note = { id, text: trimmed, source, createdAt: Date.now(), chunks, centroid };
-        setNotes((ns) => [...ns, note]);
-        return note;
+        setNotesBoth((ns) => [...ns, note]);
+        return { status: "added", note };
       } finally {
         setPendingIds((p) => {
           const next = new Set(p);
@@ -37,8 +75,49 @@ export function useNotesSession() {
         });
       }
     },
-    [embedNote]
+    [embedNote, setNotesBoth]
   );
 
-  return { embedderState, load, notes, addNote, pendingIds, embedTexts };
+  const editNote = useCallback(
+    async (noteId: string, newText: string): Promise<EditNoteResult> => {
+      const trimmed = newText.trim();
+      if (trimmed.length === 0) return { status: "empty" };
+
+      const current = notesRef.current;
+      const existing = current.find((n) => n.id === noteId);
+      if (!existing) return { status: "not-found" };
+
+      const others = current.filter((n) => n.id !== noteId).map((n) => n.text);
+      if (isDuplicateText(trimmed, others)) {
+        return { status: "duplicate" };
+      }
+
+      setPendingIds((p) => new Set(p).add(noteId));
+      try {
+        const { chunks, centroid } = await embedNote(noteId, trimmed);
+        setNotesBoth((ns) => ns.map((n) => (n.id === noteId ? { ...n, text: trimmed, chunks, centroid } : n)));
+        return { status: "edited" };
+      } finally {
+        setPendingIds((p) => {
+          const next = new Set(p);
+          next.delete(noteId);
+          return next;
+        });
+      }
+    },
+    [embedNote, setNotesBoth]
+  );
+
+  const removeNote = useCallback(
+    (noteId: string) => {
+      setNotesBoth((ns) => ns.filter((n) => n.id !== noteId));
+    },
+    [setNotesBoth]
+  );
+
+  const clearSamples = useCallback(() => {
+    setNotesBoth((ns) => ns.filter((n) => n.source !== "sample"));
+  }, [setNotesBoth]);
+
+  return { embedderState, load, notes, addNote, editNote, removeNote, clearSamples, pendingIds, embedTexts };
 }

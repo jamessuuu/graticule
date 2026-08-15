@@ -157,6 +157,23 @@ main {
   padding-left: 0.9rem;
 }
 
+.map-figure {
+  margin: 1.25rem 0 0;
+}
+
+.map-figure figcaption {
+  margin-top: 0.6rem;
+}
+
+.map-empty {
+  border: 1px dashed var(--line);
+  border-radius: 2px;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--ink-soft);
+  margin-top: 1.25rem;
+}
+
 .receipt-row {
   display: flex;
   gap: 1.5rem;

@@ -19,7 +19,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { chunkNote, segmentGraphemes, segmentSentences } from "../packages/core/src/index.ts";
+import { chunkNote, cosineSimilarity, isDuplicateText, segmentGraphemes, segmentSentences } from "../packages/core/src/index.ts";
 import { createDefaultEmbedder } from "../packages/model/src/embedders.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -145,6 +145,65 @@ const verifiers = {
     assertChunksPartitionCleanly(graphemes, chunks);
 
     return { realTokenCount, syntheticChunkCount: chunks.length };
+  },
+
+  "nfc-nfd-pair": async (fixture, ctx) => {
+    const { nfcText, nfdText } = fixture.input;
+    const { minCosineSimilarity, dedupeCollapsesThem } = fixture.expected;
+    assert(nfcText !== nfdText, "fixture's NFC and NFD forms must be genuinely different byte sequences");
+    assert(nfcText.normalize("NFC") === nfcText, "input.nfcText is not actually NFC-normalized");
+    assert(nfdText.normalize("NFD") === nfdText, "input.nfdText is not actually NFD-normalized");
+
+    const [embNfc, embNfd] = await ctx.embedder.embed([nfcText, nfdText]);
+    const cosine = cosineSimilarity(embNfc, embNfd);
+    assert(cosine >= minCosineSimilarity, `expected cosine >= ${minCosineSimilarity}, measured ${cosine}`);
+
+    const collapsed = isDuplicateText(nfdText, [nfcText]) && isDuplicateText(nfcText, [nfdText]);
+    assert(collapsed === dedupeCollapsesThem, "isDuplicateText did not collapse the NFC/NFD pair as expected");
+
+    return { cosine };
+  },
+
+  "truncation-boundary": async (fixture, ctx) => {
+    const { unflaggedText, flaggedIntro, flaggedLongSentenceVocab, flaggedLongSentenceWordCount } = fixture.input;
+    const { unflaggedHasNoTruncatedChunks, flaggedHasExactlyOneTruncatedChunk, maxCosineTruncatedVsFullSentence } =
+      fixture.expected;
+
+    // --- ~90-word note: nothing should be flagged.
+    const unflaggedChunks = chunkNote(unflaggedText, { ...CHUNK_OPTS_BASE, countTokens: ctx.countTokens, noteId: "u" });
+    const noneFlagged = unflaggedChunks.every((c) => !c.truncated);
+    assert(noneFlagged === unflaggedHasNoTruncatedChunks, `expected no truncated chunks in the unflagged note, got ${unflaggedChunks.filter((c) => c.truncated).length}`);
+
+    // --- ~180-word note: rebuild the long run-on sentence from the
+    // fixture's own recipe (same construction verified during authoring).
+    const longWords = [];
+    for (let i = 0; i < flaggedLongSentenceWordCount; i++) {
+      longWords.push(flaggedLongSentenceVocab[i % flaggedLongSentenceVocab.length]);
+    }
+    const longSentence = `Throughout the entire planning cycle we discussed ${longWords.join(" ")} without ever really settling on a single clear direction that everyone could commit to.`;
+    const flaggedText = `${flaggedIntro} ${longSentence}`;
+
+    const flaggedChunks = chunkNote(flaggedText, { ...CHUNK_OPTS_BASE, countTokens: ctx.countTokens, noteId: "f" });
+    const truncatedChunks = flaggedChunks.filter((c) => c.truncated);
+    assert(
+      (truncatedChunks.length === 1) === flaggedHasExactlyOneTruncatedChunk,
+      `expected exactly one truncated chunk, got ${truncatedChunks.length}`
+    );
+    const truncatedChunk = truncatedChunks[0];
+    assert(truncatedChunk.text.length < longSentence.length, "truncated chunk text should be strictly shorter than the original sentence");
+
+    // The direct proof: the truncated chunk's real embedding must differ
+    // meaningfully from an embedding of the FULL untruncated sentence —
+    // if a regression ever embedded the full text despite the truncated
+    // flag, this would read as ~1.0 / byte-identical instead.
+    const [embTruncated, embFull] = await ctx.embedder.embed([truncatedChunk.text, longSentence]);
+    const cosine = cosineSimilarity(embTruncated, embFull);
+    assert(
+      cosine <= maxCosineTruncatedVsFullSentence,
+      `truncated-chunk embedding is suspiciously close to the full-sentence embedding (cosine ${cosine}) — position may not actually derive only from the truncated content`
+    );
+
+    return { unflaggedChunkCount: unflaggedChunks.length, flaggedChunkCount: flaggedChunks.length, cosineTruncatedVsFull: cosine };
   },
 };
 

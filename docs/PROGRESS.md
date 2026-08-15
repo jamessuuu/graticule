@@ -9,7 +9,7 @@ should look first.
 |---|---|---|
 | M0 | Workspace, TS strict, CI, brand, zero-functions gate, static `/` | done |
 | M1 | Chunking core + default embedder in a Worker + first real inference | done |
-| M2 | PCA + dual markers + live typing + paste/drop + NFC dedupe + truncation + caps | not started |
+| M2 | PCA + dual markers + live typing + paste/drop + NFC dedupe + truncation + caps | done |
 | M3 | Search + percentile + deterministic clustering + outlier, floors enforced | not started |
 | M4 | `/limits` negation demo + `/coverage` wired to real fixture results | not started |
 | M5 | Multilingual opt-in (gesture-gated) | not started |
@@ -43,3 +43,21 @@ SPEC.md's literal text, and why.
   localization-specialist/native-speaker authenticity pass, unrelated-
   sentence distractors, and real threshold measurement — do that work
   when M4 starts rather than re-requesting the content.
+- **`useNotesSession`'s dedupe/caps checks read a `notesRef` mirror, not
+  the `notes` state directly** — needed because React state updates from
+  a moment ago may not have flushed into a closure yet when the next
+  add/edit call needs a synchronous read. If you add another mutator,
+  route it through `setNotesBoth` (keeps the ref in sync), not raw
+  `setNotes`.
+- **Two separate hidden `<input type="file">` elements, not one** —
+  `webkitdirectory` forces a browser's native picker into folder-only
+  mode unconditionally, so sharing one input between "Choose files" and
+  the folder fallback would silently break plain multi-file selection.
+  See `NoteWorkbench.tsx`.
+- **A real hydration-mismatch bug was caught and fixed in M2**: reading
+  `window`-dependent feature detection (`showDirectoryPicker` support)
+  directly in a hook body during render differs between SSR and the
+  client's first paint. Fixed via the standard `useState(false)` +
+  `useEffect` "client-only" pattern in `useFileImport.ts`. Worth
+  remembering as a pattern, not just a one-off fix, before adding any
+  more `typeof window` / browser-API feature checks.

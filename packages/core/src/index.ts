@@ -9,3 +9,5 @@ export * from "./pairs";
 export * from "./percentile";
 export * from "./cluster";
 export * from "./outlier";
+export * from "./dedupe";
+export * from "./caps";
