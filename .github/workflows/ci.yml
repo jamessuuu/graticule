@@ -1,0 +1,51 @@
+name: CI
+
+# NOTE: this repo has no remote configured during the build session that
+# authored it (see docs/DEVIATIONS.md #2) — this workflow documents the
+# intended gate but has never executed on GitHub Actions. The real
+# verifier used throughout the build is `pnpm run ci`, run locally.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Unit tests
+        run: pnpm run unit
+
+      - name: Fixtures (real local inference, $0)
+        run: pnpm run fixtures
+
+      - name: Build (brand + static export + zero-functions gate)
+        run: pnpm run build
+
+      - name: e2e
+        run: pnpm run e2e:full

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 64" role="img" aria-label="graticule">
+  <title>graticule</title>
+  <g transform="translate(0,0)">
+    <line x1="10" y1="6" x2="10" y2="58" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/>
+    <line x1="30" y1="6" x2="30" y2="58" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/>
+    <line x1="2" y1="20" x2="38" y2="20" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/>
+    <line x1="2" y1="42" x2="38" y2="42" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="22" cy="30" r="4" fill="#D97706"/>
+  </g>
+  <text x="52" y="42" font-family="ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace" font-size="30" fill="#1A1A1A" letter-spacing="-0.5">graticule</text>
+</svg>

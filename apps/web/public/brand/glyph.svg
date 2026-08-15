@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="graticule mark: a coordinate grid with one plotted point off-intersection">
+  <title>graticule</title>
+
+  <line x1="20" y1="4" x2="20" y2="96" stroke="#1A1A1A" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="70" y1="4" x2="70" y2="96" stroke="#1A1A1A" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="4" y1="30" x2="96" y2="30" stroke="#1A1A1A" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="4" y1="75" x2="96" y2="75" stroke="#1A1A1A" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="46" cy="54" r="7" fill="#D97706"/>
+</svg>

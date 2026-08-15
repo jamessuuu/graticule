@@ -1,0 +1,38 @@
+{
+  "name": "graticule",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A visitor's own notes, mapped honestly — on-device semantic map, search, and a live demonstration of where the technique breaks.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "lint": "eslint .",
+    "unit": "vitest run",
+    "fixtures": "node scripts/verify-fixtures.mjs",
+    "chunking-golden": "node scripts/verify-chunking-golden.mjs",
+    "determinism": "node scripts/verify-determinism.mjs",
+    "brand": "node scripts/brand.mjs",
+    "zero-functions": "node scripts/check-zero-functions.mjs",
+    "build:web": "pnpm --filter @graticule/web run build",
+    "build": "pnpm run brand && pnpm run build:web && pnpm run zero-functions",
+    "serve:static": "node scripts/serve-static.mjs",
+    "e2e:smoke": "playwright test --grep @smoke",
+    "e2e:full": "playwright test",
+    "ci": "pnpm run typecheck && pnpm run lint && pnpm run unit && pnpm run fixtures && pnpm run build && pnpm run e2e:full"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@playwright/test": "1.62.1",
+    "eslint": "^9.0.0",
+    "globals": "^17.11.0",
+    "playwright": "1.62.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "4.1.10"
+  }
+}
