@@ -4,7 +4,9 @@ dist/
 out/
 .next/
 build/
-coverage/
+# Vitest --coverage output (root-level only — NOT fixtures/coverage/,
+# which is real project data, not a generated report).
+/coverage/
 *.log
 .DS_Store
 Thumbs.db
@@ -16,3 +18,7 @@ test-results/
 .turbo/
 *.tsbuildinfo
 /scripts/.model-cache/
+
+# Build artifact: compiled by scripts/build-worker.mjs (esbuild), part of
+# `pnpm run build` — never hand-edited, always regenerated.
+/apps/web/public/worker/
