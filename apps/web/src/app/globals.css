@@ -229,10 +229,16 @@ select:focus {
   flex: none;
 }
 
+/* WCAG 2.2 AA SC 2.5.8: a standalone nav link is a target, not prose, so the
+   inline-text exemption does not cover it. The text box was 22.8px tall; the
+   min-height buys the missing pixels without moving the baseline. */
 .site-header nav a {
   font-size: 0.92rem;
   color: var(--ink-soft);
   text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
 }
 
 .site-header nav a:hover {
@@ -265,6 +271,15 @@ main {
 
 .site-footer a {
   color: var(--ink-soft);
+}
+
+/* Direct children of the footer row only — the attribution kit's own links sit
+   inside its <p> and must stay display:inline to keep the SC 2.5.8 inline-text
+   exemption the kit is built around. */
+.site-footer .footer-row > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
 }
 
 /* ------------------------------------------------------------------ type */
