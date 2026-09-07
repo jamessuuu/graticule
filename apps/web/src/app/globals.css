@@ -362,6 +362,18 @@ a.chip:hover {
   color: var(--ink);
 }
 
+/* A pill that wraps to two lines reads as a mistake. Below 560px this one
+   wraps, so it squares off and its dot stays aligned to the first line. */
+@media (max-width: 560px) {
+  .chip-warn {
+    border-radius: 10px;
+    align-items: flex-start;
+  }
+  .chip-warn .dot {
+    margin-top: 0.45em;
+  }
+}
+
 .chip b {
   color: var(--ink);
 }
