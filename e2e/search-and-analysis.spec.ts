@@ -15,7 +15,15 @@ async function addNote(page: import("@playwright/test").Page, text: string) {
   await textarea.fill(text);
   await expect(textarea).toHaveValue(text); // confirm the fill actually took effect
   await page.getByRole("button", { name: "Add note" }).click();
-  await expect(page.getByText(text, { exact: false })).toBeVisible({ timeout: 15_000 });
+  // Scoped to the note list. An unscoped getByText also matched the analysis
+  // panel, which quotes a note's text back in the outlier line, so once three
+  // notes were in the session the same string appeared twice and Playwright's
+  // strict mode failed the assertion. It passed before only because the
+  // analysis panel happened to re-render after this check; that was a race,
+  // not a guarantee, and it lost as soon as the page got shorter.
+  await expect(page.locator("main ul > li").getByText(text, { exact: false }).first()).toBeVisible({
+    timeout: 15_000,
+  });
 }
 
 test("@smoke search, pairwise percentile, and outlier floors behave correctly", async ({ page }) => {

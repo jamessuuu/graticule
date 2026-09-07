@@ -10,6 +10,9 @@ const PROJECTION_DEBOUNCE_MS = 300;
 export const MAP_VIEWPORT_SIZE = 600;
 export const MAP_VIEWPORT_PADDING = 40;
 
+/** Graticule lines, every 60 units of the 600-unit viewport. */
+const GRID_LINES = [60, 120, 180, 240, 300, 360, 420, 480, 540];
+
 export interface MapProps {
   notes: Note[];
   reducedMotion: boolean;
@@ -86,8 +89,54 @@ export function Map({ notes, reducedMotion, selectedNoteId, onSelectNote }: MapP
         viewBox={`0 0 ${MAP_VIEWPORT_SIZE} ${MAP_VIEWPORT_SIZE}`}
         role="img"
         aria-label={`Map of ${notes.length} notes, positioned by wording similarity. A text list of closest pairs is available below as the accessible equivalent.`}
-        style={{ width: "100%", height: "auto", background: "var(--paper)", border: "1px solid var(--line)" }}
+        style={{ width: "100%", height: "auto", background: "var(--paper)", border: "1px solid var(--line-strong)" }}
       >
+        {/* The grid the project is named for. Decorative: it carries no
+            scale (the axes are PCA components, whose units mean nothing to
+            a reader), so it is aria-hidden and drawn under everything. It
+            exists to make the marks read as plotted rather than scattered. */}
+        <g aria-hidden="true">
+          {GRID_LINES.map((v) => (
+            <line
+              key={`gx-${v}`}
+              x1={v}
+              y1={0}
+              x2={v}
+              y2={MAP_VIEWPORT_SIZE}
+              stroke="var(--line)"
+              strokeWidth={1}
+            />
+          ))}
+          {GRID_LINES.map((v) => (
+            <line
+              key={`gy-${v}`}
+              x1={0}
+              y1={v}
+              x2={MAP_VIEWPORT_SIZE}
+              y2={v}
+              stroke="var(--line)"
+              strokeWidth={1}
+            />
+          ))}
+          <line
+            x1={MAP_VIEWPORT_SIZE / 2}
+            y1={0}
+            x2={MAP_VIEWPORT_SIZE / 2}
+            y2={MAP_VIEWPORT_SIZE}
+            stroke="var(--line-strong)"
+            strokeWidth={1}
+            opacity={0.55}
+          />
+          <line
+            x1={0}
+            y1={MAP_VIEWPORT_SIZE / 2}
+            x2={MAP_VIEWPORT_SIZE}
+            y2={MAP_VIEWPORT_SIZE / 2}
+            stroke="var(--line-strong)"
+            strokeWidth={1}
+            opacity={0.55}
+          />
+        </g>
         {projection.chunkCoords.map((c) => {
           const { x, y } = toSvg(c.x, c.y);
           return (
@@ -96,8 +145,8 @@ export function Map({ notes, reducedMotion, selectedNoteId, onSelectNote }: MapP
               cx={x}
               cy={y}
               r={3}
-              fill={c.truncated ? "var(--amber)" : "var(--line-strong)"}
-              opacity={0.35}
+              fill={c.truncated ? "var(--amber)" : "var(--ink-3)"}
+              opacity={0.55}
               style={transitionStyle}
             />
           );
@@ -125,13 +174,23 @@ export function Map({ notes, reducedMotion, selectedNoteId, onSelectNote }: MapP
                   dot (no other effect), so removing the fake keyboard path
                   loses nothing SessionAnalysis's text-list equivalent
                   doesn't already cover. */}
+              {isActive && (
+                <circle
+                  cx={x}
+                  cy={y}
+                  r={16}
+                  fill="var(--amber)"
+                  opacity={0.16}
+                  style={{ pointerEvents: "none" }}
+                />
+              )}
               <circle
                 cx={x}
                 cy={y}
                 r={isActive ? 9 : 7}
-                fill="var(--ink)"
-                stroke={isActive ? "var(--amber)" : "none"}
-                strokeWidth={2}
+                fill={isActive ? "var(--amber)" : "var(--mark)"}
+                stroke="var(--paper)"
+                strokeWidth={1.5}
                 style={{ pointerEvents: "none", ...transitionStyle }}
               />
             </g>

@@ -1,6 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const PORT = 4173;
+// Overridable so a run can move off 4173 when something else on the machine
+// already holds it. Without this, `reuseExistingServer` happily pointed the
+// whole suite at a different project's dev server and every assertion failed
+// against someone else's HTML.
+const PORT = Number(process.env.PLAYWRIGHT_PORT ?? 4173);
 const BASE_URL = `http://localhost:${PORT}`;
 
 export default defineConfig({

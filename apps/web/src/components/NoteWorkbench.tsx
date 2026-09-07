@@ -205,13 +205,23 @@ export function NoteWorkbench() {
 
   return (
     <div>
-      <ModelLifecycle embedderState={embedderState} load={load} />
-      <NetworkReceipt workerNetworkRequests={workerNetworkRequests} modelReady={embedderState.status === "ready"} />
-      <ModelUpgrade embedderState={embedderState} switchModel={switchModel} reembedding={reembedding} noteCount={notes.length} />
+      {/* Order matters here. The map used to sit under three stacked status
+          blocks including a 140MB download offer, so the first screen was
+          entirely about the page rather than about the visitor's notes. The
+          map now comes first and the model status reads as an instrument
+          strip beneath it; the optional multilingual upgrade moved down to
+          sit with the note list it re-embeds. */}
+      <div className="workbench rise rise-2">
+        <div>
+          <Map notes={notes} reducedMotion={reducedMotion} selectedNoteId={selectedNoteId} onSelectNote={setSelectedNoteId} />
 
-      <Map notes={notes} reducedMotion={reducedMotion} selectedNoteId={selectedNoteId} onSelectNote={setSelectedNoteId} />
+          <div className="status-strip">
+            <ModelLifecycle embedderState={embedderState} load={load} />
+            <NetworkReceipt workerNetworkRequests={workerNetworkRequests} modelReady={embedderState.status === "ready"} />
+          </div>
+        </div>
 
-      <form onSubmit={handleSubmit} style={{ marginTop: "1.5rem" }}>
+      <form onSubmit={handleSubmit} className="panel note-form">
         <label htmlFor="note-draft" style={{ display: "block", marginBottom: "0.4rem", fontWeight: 600 }}>
           Add a note
         </label>
@@ -277,10 +287,11 @@ export function NoteWorkbench() {
       </form>
 
       {pendingIds.size > 0 && (
-        <p className="receipt-row" role="status">
-          embedding {pendingIds.size} note{pendingIds.size === 1 ? "" : "s"}…
-        </p>
-      )}
+          <p className="receipt-row" role="status">
+            embedding {pendingIds.size} note{pendingIds.size === 1 ? "" : "s"}…
+          </p>
+        )}
+      </div>
 
       <ul style={{ listStyle: "none", padding: 0, marginTop: "1.5rem" }}>
         {notes.map((note) => (
@@ -292,6 +303,8 @@ export function NoteWorkbench() {
           }} />
         ))}
       </ul>
+
+      <ModelUpgrade embedderState={embedderState} switchModel={switchModel} reembedding={reembedding} noteCount={notes.length} />
 
       <SearchBox notes={notes} embedTexts={embedTexts} ready={embedderState.status === "ready"} />
       <SessionAnalysis notes={notes} />

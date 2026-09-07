@@ -4,6 +4,9 @@ import { useMemo } from "react";
 import type { Note } from "@graticule/core";
 import { allPairwiseSimilarities, clusterNotes, outlierNote, percentile } from "@graticule/core";
 
+/** How many ranked pairs are printed before the rest goes behind a details. */
+const TOP_PAIRS = 10;
+
 function preview(text: string, maxLen = 70): string {
   const trimmed = text.trim();
   return trimmed.length <= maxLen ? trimmed : `${trimmed.slice(0, maxLen).trimEnd()}…`;
@@ -34,11 +37,27 @@ export function SessionAnalysis({ notes }: { notes: Note[] }) {
       .sort((a, b) => b.similarity - a.similarity);
   }, [pairs, allSimilarities]);
 
+  /* Every pair, printed, is O(n^2) rows: 16 notes produced 120 list items and
+     a 10,754px page, which is the wall of text this section had become. The
+     ranked top ten answers the question (what is closest to what); the rest
+     stays reachable, and still in the DOM, behind one disclosure. */
+  const renderPair = (p: (typeof rankedPairs)[number]) => {
+    const a = byId.get(p.a);
+    const b = byId.get(p.b);
+    if (!a || !b) return null;
+    return (
+      <li key={`${p.a}-${p.b}`} style={{ marginBottom: "0.35rem" }}>
+        "{preview(a.text)}" and "{preview(b.text)}" — more similar than {Math.round(p.pct ?? 0)}% of the
+        other pairs you pasted.
+      </li>
+    );
+  };
+
   const clusters = useMemo(() => clusterNotes(centroids), [centroids]);
   const outlier = useMemo(() => outlierNote(centroids), [centroids]);
 
   return (
-    <section aria-labelledby="analysis-heading" style={{ marginTop: "2rem" }}>
+    <section aria-labelledby="analysis-heading" className="panel analysis-panel">
       <h2 id="analysis-heading" style={{ fontSize: "1.05rem" }}>
         How your notes relate
       </h2>
@@ -48,19 +67,18 @@ export function SessionAnalysis({ notes }: { notes: Note[] }) {
       {notes.length < 5 ? (
         <p className="disclosure">Add {5 - notes.length} more note{5 - notes.length === 1 ? "" : "s"} to see pairwise comparisons.</p>
       ) : (
-        <ul style={{ paddingLeft: "1.25rem" }}>
-          {rankedPairs.map((p) => {
-            const a = byId.get(p.a);
-            const b = byId.get(p.b);
-            if (!a || !b) return null;
-            return (
-              <li key={`${p.a}-${p.b}`} style={{ marginBottom: "0.35rem" }}>
-                "{preview(a.text)}" and "{preview(b.text)}" — more similar than {Math.round(p.pct ?? 0)}% of the
-                other pairs you pasted.
-              </li>
-            );
-          })}
-        </ul>
+        <>
+          <ul style={{ paddingLeft: "1.25rem" }}>{rankedPairs.slice(0, TOP_PAIRS).map(renderPair)}</ul>
+          {rankedPairs.length > TOP_PAIRS && (
+            <details className="pair-overflow">
+              <summary>
+                the remaining {rankedPairs.length - TOP_PAIRS} pair
+                {rankedPairs.length - TOP_PAIRS === 1 ? "" : "s"}
+              </summary>
+              <ul style={{ paddingLeft: "1.25rem" }}>{rankedPairs.slice(TOP_PAIRS).map(renderPair)}</ul>
+            </details>
+          )}
+        </>
       )}
 
       {/* Clustering. */}
