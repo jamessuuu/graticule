@@ -11,6 +11,8 @@ export const ATTRIBUTION = {
   name: "James Lorenz Santos",
   portfolio: "https://agentjames.vercel.app",
   linkedin: "https://www.linkedin.com/in/james-lorenz-santos-720776251/",
+  onlinejobs: "https://www.onlinejobs.ph/jobseekers/info/2766463",
+  jobstreet: "https://ph.jobstreet.com/profiles/jameslorenz-santos-SXdpKyGqdK",
 } as const;
 
 /** The Agent James chip mark. Two drawings of one identity: below 40px the mark-16 drawing, at 40px and up the full one. */
@@ -58,14 +60,27 @@ export function Attribution({
     <p className={rootCls}>
       <AgentJamesMark size={size} />
       Built by{" "}
-      <a href={ATTRIBUTION.portfolio} rel="me noopener" className={linkClassName}>
+      <a href={ATTRIBUTION.portfolio} rel="author me" className={linkClassName}>
         {ATTRIBUTION.name}
+      </a>
+      , agentic engineer
+      <span className="aj-attribution__sep" aria-hidden="true">
+        &middot;
+      </span>
+      <a href={ATTRIBUTION.linkedin} rel="me" className={linkClassName}>
+        LinkedIn
       </a>
       <span className="aj-attribution__sep" aria-hidden="true">
         &middot;
       </span>
-      <a href={ATTRIBUTION.linkedin} rel="me noopener" target="_blank" className={linkClassName}>
-        LinkedIn
+      <a href={ATTRIBUTION.onlinejobs} rel="me" className={linkClassName}>
+        OnlineJobs.ph
+      </a>
+      <span className="aj-attribution__sep" aria-hidden="true">
+        &middot;
+      </span>
+      <a href={ATTRIBUTION.jobstreet} rel="me" className={linkClassName}>
+        JobStreet
       </a>
     </p>
   );
